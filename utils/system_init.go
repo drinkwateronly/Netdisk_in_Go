@@ -10,6 +10,12 @@ import (
 )
 
 var DB *gorm.DB
+var MyLog *log.Logger
+
+func InitLogger() {
+	file, _ := os.Create("logger.txt")
+	MyLog = log.New(file, "example ", log.Ldate|log.Ltime|log.Lshortfile)
+}
 
 func InitMySQL() {
 	// 自定义SQL语句日志
