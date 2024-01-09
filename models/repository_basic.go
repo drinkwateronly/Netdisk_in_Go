@@ -1,28 +1,14 @@
 package models
 
 import (
+	"gorm.io/gorm"
 	"netdisk_in_go/utils"
 	"time"
 )
 
-// 中心存储池
-type RepositoryPool struct {
-	Id        int64
-	Identity  string
-	Hash      string
-	Size      int64
-	Path      string
-	CreatedAt time.Time `gorm:"created"`
-	UpdatedAt time.Time `gorm:"updated"`
-	DeletedAt time.Time `gorm:"deleted"`
-}
-
-func (RepositoryPool) TableName() string {
-	return "repository_pool"
-}
-
 // 用户存储池
 type UserRepository struct {
+	gorm.Model
 	Id         int64     `json:"id"`
 	UserFileId string    `json:"userFileId"`
 	UserId     string    `json:"userId"`
@@ -30,22 +16,72 @@ type UserRepository struct {
 	IsDir      int       `json:"isDir"`
 	FilePath   string    `json:"filePath"`
 	FileName   string    `json:"fileName"`
+	FileType   int       `json:"fileType"`
 	ExtendName string    `json:"extendName"`
 	UploadTime time.Time `json:"uploadTime"`
 	FileSize   int64     `json:"fileSize"`
-	//UpdatedAt  time.Time `gorm:"updated"`
-	//DeletedAt  time.Time `gorm:"deleted"`
 }
 
 func (table UserRepository) TableName() string {
 	return "user_repository"
 }
 
-func FindFilesByPath(path, userIdentity string, fileType, currentPage, pageCount int) ([]UserRepository, error) {
+// FindFilesByPathAndPage 根据文件地址，分页查询多个文件
+func FindFilesByPathAndPage(filePath, userId string, currentPage, pageCount int) ([]UserRepository, error) {
 	var files []UserRepository
 	// 分页查询
 	offset := pageCount * (currentPage - 1)
-	err := utils.DB.Where("file_path = ?", path).Find(&files).
+	err := utils.DB.Where("user_id = ? and file_path = ?", userId, filePath).Find(&files).
+		Offset(offset).Limit(pageCount).Error
+	return files, err
+}
+
+// FindFileByPathAndName 根据文件地址文件名，查询文件是否存在
+func FindFileByPathAndName(userId, filePath, fileName, extendName string) (*UserRepository, bool) {
+	var file UserRepository
+	// 分页查询
+	rowsAffected := utils.DB.
+		Where("user_id = ? and file_path = ? and file_name = ? and extend_name = ?", userId, filePath, fileName, extendName).
+		Find(&file).RowsAffected
+	if rowsAffected == 0 { // 文件不存在
+		return nil, false
+	}
+	// 文件存在或者出错
+	return &file, true
+}
+
+func FindFileById(userId, userFileId string) (*UserRepository, bool) {
+	var file UserRepository
+	// 分页查询
+	rowsAffected := utils.DB.
+		Where("user_id = ? and user_file_id = ?", userId, userFileId).
+		Find(&file).RowsAffected
+	if rowsAffected == 0 { // 文件不存在
+		return nil, false
+	}
+	// 文件存在或者出错
+	return &file, true
+}
+
+func FindFileSavePathById(userId, userFileId string) (*RepositoryPool, bool) {
+	var rp RepositoryPool
+	// 分页查询
+	rowsAffected := utils.DB.Joins("JOIN user_repository ON repository_pool.file_id = user_repository.file_id").
+		Where("user_repository.user_id = ? and user_repository.user_file_id = ?", userId, userFileId).
+		Find(&rp).RowsAffected
+	if rowsAffected == 0 { // 文件不存在
+		return nil, false
+	}
+	// 文件存在或者出错
+	return &rp, true
+}
+
+// FindFilesByTypeAndPage 根据文件类型，查询所有文件
+func FindFilesByTypeAndPage(fileType int, userId string, currentPage, pageCount int) ([]UserRepository, error) {
+	var files []UserRepository
+	// 分页查询
+	offset := pageCount * (currentPage - 1)
+	err := utils.DB.Where("user_id = ? and file_type = ?", userId, fileType).Find(&files).
 		Offset(offset).Limit(pageCount).Error
 	return files, err
 }

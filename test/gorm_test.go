@@ -1,9 +1,11 @@
 package test
 
 import (
+	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"netdisk_in_go/models"
+	"netdisk_in_go/utils"
 	"testing"
 )
 
@@ -27,4 +29,13 @@ func TestGorm(t *testing.T) {
 	//// Update - 将 product 的 price 更新为 200
 	//db.Model(&user).Update("Password", "990414")
 	//// Update - 更新多个字段
+}
+
+func TestFind(t *testing.T) {
+	utils.InitMySQL()
+	ub, isExist := models.FindUserByPhone("18927841103")
+	if isExist {
+		t.Fatal("?")
+	}
+	fmt.Println(ub)
 }

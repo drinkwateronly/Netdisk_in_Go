@@ -13,7 +13,7 @@ type UserBasic struct {
 	Salt             string
 	Phone            string
 	Email            string
-	UserIdentity     string
+	UserId           string
 	UserType         uint
 	TotalStorageSize int64 // 总存储量，byte为单位
 	StorageSize      int64 // 已使用存储量，byte为单位
@@ -32,10 +32,19 @@ func CreateUser(ub *UserBasic) *gorm.DB {
 }
 
 func FindUserByPhone(phone string) (*UserBasic, bool) {
-	ub := &UserBasic{}
-	rowsAffected := utils.DB.Where("phone = ?", phone).First(&ub).RowsAffected
-	if rowsAffected == 0 {
+	ub := UserBasic{}
+	rowAffected := utils.DB.Where("phone = ?", phone).Find(&ub).RowsAffected
+	if rowAffected == 0 { // 用户不存在
 		return nil, false
 	}
-	return ub, true
+	return &ub, true
+}
+
+func FindUserByIdentity(userId string) (*UserBasic, bool) {
+	ub := UserBasic{}
+	rowAffected := utils.DB.Where("user_id = ?", userId).Find(&ub).RowsAffected
+	if rowAffected == 0 { // 用户不存在
+		return nil, false
+	}
+	return &ub, true
 }

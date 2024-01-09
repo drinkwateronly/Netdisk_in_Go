@@ -18,6 +18,7 @@ func InitLogger() {
 }
 
 func InitMySQL() {
+
 	// 自定义SQL语句日志
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),

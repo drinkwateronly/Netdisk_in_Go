@@ -9,14 +9,14 @@ import (
 
 type UserClaim struct {
 	Phone                string
-	Identity             string
+	UserId               string
 	jwt.RegisteredClaims // 不要写成RegisteredClaims jwt.RegisteredClaims
 }
 
-func GenerateToken(phone string, identity string, expireTime int) (string, error) {
+func GenerateToken(phone string, userId string, expireTime int) (string, error) {
 	uc := UserClaim{
-		Phone:    phone,
-		Identity: identity,
+		Phone:  phone,
+		UserId: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "CHENJIE",
 			NotBefore: jwt.NewNumericDate(time.Now()), // 在该时间前生效
@@ -31,7 +31,8 @@ func GenerateToken(phone string, identity string, expireTime int) (string, error
 	return tokenString, nil
 }
 
-func ParseToken(token string) (*UserClaim, error) {
+// ParseCookie 从token解析出UserClaim
+func ParseCookie(token string) (*UserClaim, error) {
 	// 新建userClaim结构体
 	uc := new(UserClaim)
 	// jwt.ParseWithClaims 输入 需要解析的JWT字符串、一个实现了jwt.Claims接口的结构体、用于提供验证签名所需的密钥的回调函数
@@ -48,10 +49,21 @@ func ParseToken(token string) (*UserClaim, error) {
 	return uc, err
 }
 
-func ParseTokenFromCookie(c *gin.Context) (*UserClaim, error) {
+// ParseCookieFromRequest 从Context中获取cookie并解析
+func ParseCookieFromRequest(c *gin.Context) (*UserClaim, error) {
+	// 判断请求有无带token
 	token, err := c.Cookie("token")
 	if err != nil {
 		return nil, errors.New("no token in request")
 	}
-	return ParseToken(token)
+	return ParseCookie(token)
+}
+
+// CheckCookie 解析cookie，并判断是否有效
+func CheckCookie(c *gin.Context) (*UserClaim, bool) {
+	uc, err := ParseCookieFromRequest(c)
+	if err != nil {
+		return nil, false
+	}
+	return uc, true
 }
