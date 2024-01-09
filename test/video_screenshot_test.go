@@ -1,17 +1,21 @@
 package test
 
 import (
-	"bytes"
-	"fmt"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"io"
+	"netdisk_in_go/utils"
 	"os"
 	"testing"
 )
 
+// ffmpeg，下载并假如环境变量即可
+// https://zhuanlan.zhihu.com/p/118362010
+// https://github.com/BtbN/FFmpeg-Builds/releases
 func TestScreenshot(t *testing.T) {
-	reader := exampleReadFrameAsJpeg("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
-	file, err := os.Create("./out1.jpeg")
+	reader, err := utils.GetFrameFromVideo("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create("./image/frame.jpeg")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,18 +24,4 @@ func TestScreenshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-}
-
-func exampleReadFrameAsJpeg(inFileName string, frameNum int) io.Reader {
-	buf := bytes.NewBuffer(nil)
-
-	err := ffmpeg.Input(inFileName).
-		Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameNum)}).
-		Output("pipe:", ffmpeg.KwArgs{"vframes": 1, "format": "image2", "vcodec": "mjpeg"}).
-		WithOutput(buf, os.Stdout).
-		Run()
-	if err != nil {
-		panic(err)
-	}
-	return buf
 }

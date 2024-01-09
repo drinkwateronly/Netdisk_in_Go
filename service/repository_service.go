@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"io"
 	"log"
+	"net/http"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 	"os"
@@ -508,47 +509,79 @@ func FilePreview(c *gin.Context) {
 		utils.RespBadReq(writer, "用户不存在")
 		return
 	}
-	// 处理请求参数
-	type FilePreviewRequest struct {
-		UserFileId     string `json:"userFileId"`
-		ShareBatchNum  string `json:"shareBatchNum"`
-		ExtractionCode string `json:"extractionCode"`
-		IsMin          bool   `json:"isMin"`
-	}
-	r := FilePreviewRequest{}
-	err := c.ShouldBindQuery(&r)
-	if err != nil {
-		utils.RespBadReq(writer, "请求参数错误")
-	}
 
-	//json := make(map[string]interface{})
-	//c.BindJSON(&json)
-	//userFileId := json["userFileId"].(string)
+	// 处理请求参数
+	//type FilePreviewRequest struct {
+	//	UserFileId     string `json:"userFileId"`
+	//	ShareBatchNum  string `json:"shareBatchNum"`
+	//	ExtractionCode string `json:"extractionCode"`
+	//	IsMin          bool   `json:"isMin"`
+	//}
+	//r := FilePreviewRequest{}
+	//err := c.ShouldBindQuery(&r)
+	//if err != nil {
+	//	utils.RespBadReq(writer, "请求参数错误")
+	//}
 	userFileId := c.Query("userFileId")
 	isMin := c.Query("isMin")
-	//extractionCode := c.Query("userFileId")
 
-	// 预览最小文件
-	if isMin == "true" {
-		utils.RespOK(writer, 0, true, nil, "最小化预览")
-		return
-	}
+	// 获取文件信息
+	ur, isExist1 := models.FindFileById(uc.UserId, userFileId)
+	rp, isExist2 := models.FindFileSavePathById(ub.UserId, userFileId)
 
-	// 预览整体文件
-	rp, isExist := models.FindFileSavePathById(ub.UserId, userFileId)
-	if !isExist {
-		utils.RespBadReq(writer, "文件不存在")
+	if !(isExist1 && isExist2) {
+		utils.RespBadReq(writer, "文件不存在，请联系管理员")
 		return
 	}
 
 	file, err := os.OpenFile(rp.Path, os.O_RDONLY, 0777)
 	defer file.Close()
-	_, err = io.Copy(c.Writer, file)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-	utils.RespOK(writer, 0, true, nil, "原始预览")
+
+	if isMin == "true" {
+		// 预览最小文件
+		switch ur.FileType {
+		case utils.IMAGE:
+			previewFile, err := utils.CompressImage(file)
+			if err != nil {
+				utils.RespBadReq(writer, "出现错误1")
+				return
+			}
+			_, err = io.Copy(c.Writer, previewFile)
+			writer.WriteHeader(http.StatusOK)
+			return
+		case utils.VIDEO:
+			// 从视频中获取一帧
+			frame, err := utils.GetFrameFromVideo(rp.Path, 1)
+			if err != nil {
+				utils.RespBadReq(writer, "出现错误1")
+				return
+			}
+			// 压缩该帧
+			previewFile, err := utils.CompressImage(frame)
+			if err != nil {
+				utils.RespBadReq(writer, "出现错误2")
+				return
+			}
+			_, err = io.Copy(c.Writer, previewFile)
+			if err != nil {
+				utils.RespBadReq(writer, "出现错误3")
+				return
+			}
+			writer.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+	// 除了图片和视频，都是预览整体文件
+	_, err = io.Copy(c.Writer, file)
+	if err != nil {
+		utils.RespBadReq(writer, "出现错误1")
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
 	return
 
 }

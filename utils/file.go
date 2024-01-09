@@ -1,8 +1,13 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/nfnt/resize"
+	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"image"
+	"image/jpeg"
 	"io"
 	"os"
 	"strconv"
@@ -12,8 +17,8 @@ import (
 const (
 	IMAGE = iota + 1
 	EDITABLE
-	AUDIO
 	VIDEO
+	AUDIO
 	DICTIONARY
 	OTHER
 )
@@ -215,4 +220,42 @@ func MergeChunkToFile(chuckName, fileName string, totalChunks int) (string, erro
 	fileMD5 := Md5EncodeByte(fileByte)
 
 	return fileMD5, nil
+}
+
+func GetFrameFromVideo(videoFilePath string, frameIndex int) (io.Reader, error) {
+	buf := bytes.NewBuffer(nil)
+	err := ffmpeg.Input(videoFilePath).
+		Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameIndex)}).
+		Output("pipe:", ffmpeg.KwArgs{"vframes": 1, "format": "image2", "vcodec": "mjpeg"}).
+		WithOutput(buf, os.Stdout).
+		Run()
+	return buf, err
+}
+
+func CompressImage(file io.Reader) (io.Reader, error) {
+	var maxHeight uint = 100
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+
+	/* 没有效果
+	// 获取图像尺寸
+	width := img.Bounds().Max.X - img.Bounds().Min.X
+	height := img.Bounds().Max.Y - img.Bounds().Min.Y
+	// 修改图像尺寸
+	compressImage := image.NewRGBA(image.Rect(0, 0, width*maxHeight/height, maxHeight))
+	draw.Draw(compressImage, compressImage.Bounds(), img, image.Point{}, draw.Src)
+	*/
+
+	// 修改图像尺寸
+	resizedImg := resize.Resize(0, maxHeight, img, resize.Lanczos3)
+	buf := bytes.Buffer{}
+	// 修改图像质量
+	err = jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: 50})
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(buf.Bytes()), nil
 }
