@@ -7,7 +7,9 @@ import (
 	"github.com/nfnt/resize"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"image"
+	"image/gif"
 	"image/jpeg"
+	"image/png"
 	"io"
 	"os"
 	"strconv"
@@ -222,6 +224,7 @@ func MergeChunkToFile(chuckName, fileName string, totalChunks int) (string, erro
 	return fileMD5, nil
 }
 
+// GetFrameFromVideo 读取路径的视频文件，并截取frameIndex对应帧
 func GetFrameFromVideo(videoFilePath string, frameIndex int) (io.Reader, error) {
 	buf := bytes.NewBuffer(nil)
 	err := ffmpeg.Input(videoFilePath).
@@ -232,30 +235,88 @@ func GetFrameFromVideo(videoFilePath string, frameIndex int) (io.Reader, error) 
 	return buf, err
 }
 
-func CompressImage(file io.Reader) (io.Reader, error) {
-	var maxHeight uint = 100
+// GetClipFromVideo 读取路径的视频文件，并截取一段视频，已弃用
+func GetClipFromVideo(videoFilePath string) (io.Reader, error) {
+	buf := bytes.NewBuffer(nil)
+	err := ffmpeg.Input(videoFilePath).
+		Filter("trim", ffmpeg.Args{fmt.Sprintf("start=0:end=120")}). // 截取两分钟的视频
+		Filter("scale", ffmpeg.Args{"640:480"}).                     // 将分辨率变小
+		Output(videoFilePath + "-pv").
+		Run()
+	//ffmpeg.KwArgs{"ss": 120, "t": 120, "b:v": "512k"}
+	return buf, err
+}
+
+// SavePreviewFromVideo 读取videoFilePath路径的视频文件，并截取frameIndex对应帧作为视频文件的preview
+func SavePreviewFromVideo(videoFilePath string, frameIndex int) error {
+	err := ffmpeg.Input(videoFilePath).
+		Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameIndex)}).
+		Output(videoFilePath+"-pv", ffmpeg.KwArgs{"vframes": 1, "format": "mp4", "vcodec": "libx264"}).
+		Run()
+	return err
+}
+
+func SavePreviewFromImage(imageFilePath, imageType string) error {
+	// 读取图片文件
+	file, err := os.OpenFile(imageFilePath, os.O_RDONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	// 压缩图像
+	compressImage, _ := CompressImage(file, 50, 50, imageType)
+	//if err != nil {
+	//	return err
+	//}
+	// 存放图片的preview文件
+	create, err := os.Create(imageFilePath + "-pv")
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(create, compressImage)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// CompressImage 将图像按类型进行压缩，并指定最大的高度maxHeight，压缩过程出现任何error，则会返回未压缩的图像
+// imageType 有jpg/jpeg、gif、png 3种
+// compressQuality 仅用于jpg图像压缩
+func CompressImage(file io.Reader, maxHeight uint, compressQuality int, imageType string) (io.Reader, error) {
+	//var maxHeight uint = 100 // 设置压缩图像的最高高度
+	//compressQuality := 50    // 压缩图像的质量，越小越差
+	imageType = strings.ToLower(imageType)
 	img, _, err := image.Decode(file)
 	if err != nil {
-		return nil, err
+		// 并非图像文件
+		return file, err
 	}
 
-	/* 没有效果
-	// 获取图像尺寸
-	width := img.Bounds().Max.X - img.Bounds().Min.X
-	height := img.Bounds().Max.Y - img.Bounds().Min.Y
-	// 修改图像尺寸
-	compressImage := image.NewRGBA(image.Rect(0, 0, width*maxHeight/height, maxHeight))
-	draw.Draw(compressImage, compressImage.Bounds(), img, image.Point{}, draw.Src)
-	*/
+	//// 备用方案代码获取图像尺寸，并等比缩放，但没有效果
+	//// 获取图像尺寸
+	//width := img.Bounds().Max.X - img.Bounds().Min.X
+	//height := img.Bounds().Max.Y - img.Bounds().Min.Y
+	//// 修改图像尺寸
+	//compressImage := image.NewRGBA(image.Rect(0, 0, width*maxHeight/height, maxHeight))
+	//draw.Draw(compressImage, compressImage.Bounds(), img, image.Point{}, draw.Src)
 
-	// 修改图像尺寸
 	resizedImg := resize.Resize(0, maxHeight, img, resize.Lanczos3)
 	buf := bytes.Buffer{}
-	// 修改图像质量
-	err = jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: 50})
-	if err != nil {
-		return nil, err
+
+	if imageType == "jpg" || imageType == "jpeg" {
+		// 如果是jpg
+		err = jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: compressQuality})
+	} else if imageType == "gif" {
+		// 如果是gif
+		err = gif.Encode(&buf, resizedImg, &gif.Options{})
+	} else {
+		// 剩下的用png
+		err = png.Encode(&buf, resizedImg)
 	}
 
+	if err != nil {
+		return file, err
+	}
 	return bytes.NewReader(buf.Bytes()), nil
 }

@@ -2,11 +2,19 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+	docs "netdisk_in_go/docs"
 	"netdisk_in_go/service"
 )
 
 func Router() *gin.Engine {
 	r := gin.Default()
+	// swagger前后端分离
+	// 访问：http://localhost:8080/swagger/index.html
+	// 更新命令：swag init
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	docs.SwaggerInfo.BasePath = ""
 	// 通用
 	r.GET("/helloworld", func(context *gin.Context) {
 		context.Writer.Write([]byte("/helloworld"))

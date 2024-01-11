@@ -8,15 +8,17 @@ import (
 )
 
 type UserClaim struct {
+	Username             string
 	Phone                string
 	UserId               string
 	jwt.RegisteredClaims // 不要写成RegisteredClaims jwt.RegisteredClaims
 }
 
-func GenerateToken(phone string, userId string, expireTime int) (string, error) {
+func GenerateToken(username, phone, userId string, expireTime int) (string, error) {
 	uc := UserClaim{
-		Phone:  phone,
-		UserId: userId,
+		Username: username,
+		Phone:    phone,
+		UserId:   userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "CHENJIE",
 			NotBefore: jwt.NewNumericDate(time.Now()), // 在该时间前生效

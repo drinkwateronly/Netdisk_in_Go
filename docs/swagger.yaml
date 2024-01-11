@@ -1,0 +1,18 @@
+info:
+  contact: {}
+paths:
+  /filetransfer/getstorage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 存储容量
+          schema:
+            type: string
+        "400":
+          description: cookie校验失败
+          schema:
+            type: string
+      summary: 获取用户存储容量
+swagger: "2.0"

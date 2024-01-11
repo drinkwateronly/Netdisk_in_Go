@@ -37,17 +37,16 @@ func FindFilesByPathAndPage(filePath, userId string, currentPage, pageCount int)
 }
 
 // FindFileByPathAndName 根据文件地址文件名，查询文件是否存在
-func FindFileByPathAndName(userId, filePath, fileName, extendName string) (*UserRepository, bool) {
-	var file UserRepository
-	// 分页查询
+func FindFileByNameAndPath(userId, filePath, fileName, extendName string) (*UserRepository, bool) {
+	var ur UserRepository
 	rowsAffected := utils.DB.
 		Where("user_id = ? and file_path = ? and file_name = ? and extend_name = ?", userId, filePath, fileName, extendName).
-		Find(&file).RowsAffected
+		Find(&ur).RowsAffected
 	if rowsAffected == 0 { // 文件不存在
 		return nil, false
 	}
 	// 文件存在或者出错
-	return &file, true
+	return &ur, true
 }
 
 func FindFileById(userId, userFileId string) (*UserRepository, bool) {

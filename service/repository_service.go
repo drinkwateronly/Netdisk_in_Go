@@ -15,6 +15,12 @@ import (
 	"time"
 )
 
+// GetUserStorage
+// @Summary 获取用户存储容量
+// @Produce json
+// @Success 200 {object} string "存储容量"
+// @Failure 400 {object} string "cookie校验失败"
+// @Router /filetransfer/getstorage [get]
 func GetUserStorage(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
@@ -23,10 +29,11 @@ func GetUserStorage(c *gin.Context) {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
-	}
+	ub, _ := models.FindUserByIdentity(uc.UserId)
+	//ub, isExist := models.FindUserByIdentity(uc.UserId)
+	//if !isExist {
+	//	utils.RespBadReq(writer, "用户不存在")
+	//}
 	utils.RespOK(writer, 0, true, gin.H{
 		"storageSize":      ub.StorageSize,
 		"totalStorageSize": ub.TotalStorageSize,
@@ -111,7 +118,6 @@ func FileUploadPrepare(c *gin.Context) {
 	isDir, err := strconv.Atoi(c.Query("isDir"))
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误")
-
 		return
 	}
 	// 判断存储空间是否足够，前端已经做好了此判断工作。
@@ -119,7 +125,6 @@ func FileUploadPrepare(c *gin.Context) {
 		utils.RespBadReq(writer, "存储空间不足")
 		return
 	}
-
 	// 处理出文件名、拓展名、文件类型
 	split := strings.Split(fileName, ".")
 	fileName = strings.Join(split[0:len(split)-1], ".")
@@ -132,7 +137,7 @@ func FileUploadPrepare(c *gin.Context) {
 	}
 
 	// 判断文件在当前文件夹是否重名
-	if _, isExist := models.FindFileByPathAndName(filePath, fileName, extendName, ub.UserId); isExist {
+	if _, isExist := models.FindFileByNameAndPath(ub.UserId, filePath, fileName, extendName); isExist {
 		utils.RespOK(writer, 999999, false, nil, "文件在当前文件夹已存在")
 		return
 	}
@@ -190,11 +195,6 @@ func FileUpload(c *gin.Context) {
 	if !isAuth {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
 	}
-	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
-	}
 
 	// 上传的文件参数
 	chunkNumber, _ := strconv.Atoi(c.PostForm("chunkNumber")) // 当前分片的index
@@ -221,6 +221,10 @@ func FileUpload(c *gin.Context) {
 
 	// 保存分块文件
 	uploadedFile, err := c.FormFile("file")
+	if uploadedFile == nil {
+		utils.RespOK(writer, 99999, false, nil, "出错或用户取消上传")
+		return
+	}
 	err = c.SaveUploadedFile(uploadedFile, fmt.Sprintf("./repository/chunk_file/%s-%d.chunk", fileMD5, chunkNumber))
 	if err != nil {
 		log.Println(err)
@@ -234,6 +238,12 @@ func FileUpload(c *gin.Context) {
 	}
 
 	// 走到这里意味着最后一块分块上传完成
+	// 获取用户信息
+	ub, isExist := models.FindUserByIdentity(uc.UserId)
+	if !isExist {
+		utils.RespBadReq(writer, "用户不存在")
+	}
+
 	poolFileId := utils.GenerateUUID()
 	userFileId := utils.GenerateUUID()
 	savePath := fmt.Sprintf("./repository/upload_file/%s", poolFileId)
@@ -287,6 +297,16 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "文件上传成功")
+	// resp后，用户已经收到文件上传的记录
+	// 如果文件类型是图片/视频，则保存preview格式
+	switch ur.FileType {
+	case utils.IMAGE:
+		// 不处理错误
+		_ = utils.SavePreviewFromImage(savePath, extendName)
+	case utils.VIDEO:
+		// 不处理错误
+		_ = utils.SavePreviewFromVideo(savePath, 5)
+	}
 }
 
 func CreateFolder(c *gin.Context) {
@@ -309,6 +329,16 @@ func CreateFolder(c *gin.Context) {
 	err := c.ShouldBind(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
+		return
+	}
+	// 检查是否有重名文件
+	rowsAffected := utils.DB.
+		Where("user_id = ? AND file_name = ? AND file_path = ? AND is_dir = 1", ub.UserId, r.FolderName, r.FolderPath).
+		Find(&models.UserRepository{}).
+		RowsAffected
+	if rowsAffected != 0 {
+		utils.RespOK(writer, 999999, false, nil, "同名文件夹已存在")
+		return
 	}
 
 	err = utils.DB.Create(&models.UserRepository{
@@ -340,6 +370,7 @@ func CreateFile(c *gin.Context) {
 	uc, isAuth := utils.CheckCookie(c)
 	if !isAuth {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
+		return
 	}
 	// 获取用户信息
 	ub, isExist := models.FindUserByIdentity(uc.UserId)
@@ -353,16 +384,22 @@ func CreateFile(c *gin.Context) {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-
+	// 检查是否有重名文件
+	if _, isExist := models.FindFileByNameAndPath(ub.UserId, r.FilePath, r.FileName, r.ExtendName); isExist {
+		utils.RespOK(writer, 999999, false, nil, "文件在当前文件夹已存在")
+		return
+	}
 	// 创建文件
 	userFileUUID := utils.GenerateUUID()
-	file, err := os.OpenFile("./repository/upload_file/"+userFileUUID, os.O_CREATE, 0777)
+	poolFileUUID := utils.GenerateUUID()
+	savePath := "./repository/upload_file/" + poolFileUUID
+	file, err := os.OpenFile(savePath, os.O_CREATE, 0777)
 	file.Close()
-	// 由于新建的文件的size为0，所以算出来的hash都一样，没必要放到中心存储池。
-	err = utils.DB.Create(&models.UserRepository{
+
+	ur := &models.UserRepository{
 		UserFileId: userFileUUID,
 		UserId:     ub.UserId,
-		FileId:     "",
+		FileId:     poolFileUUID,
 		IsDir:      0,
 		FilePath:   r.FilePath,
 		FileName:   r.FileName,
@@ -370,12 +407,31 @@ func CreateFile(c *gin.Context) {
 		ExtendName: r.ExtendName,
 		UploadTime: time.Now(),
 		FileSize:   0,
-	}).Error
+	}
+	rp := models.RepositoryPool{
+		FileId: poolFileUUID,
+		Hash:   "d41d8cd98f00b204e9800998ecf8427e", // todo:mergeFileMD5
+		Size:   0,
+		Path:   savePath,
+	}
+	// 开启事务，插入文件记录repository_pool, user_repository，修改用户存储容量
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&ur).Error; err != nil {
+			// 返回任何错误都会回滚事务
+			return err
+		}
+		if err := tx.Create(&rp).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
+
 	utils.RespOK(writer, 0, true, nil, "创建文件成功")
+
 }
 
 func DeleteFile(c *gin.Context) {
@@ -534,48 +590,22 @@ func FilePreview(c *gin.Context) {
 		return
 	}
 
-	file, err := os.OpenFile(rp.Path, os.O_RDONLY, 0777)
+	previewFilePath := rp.Path
+	if isMin == "true" {
+		// 预览最小文件
+		switch ur.FileType {
+		case utils.IMAGE:
+			previewFilePath = rp.Path + "-pv"
+		case utils.VIDEO:
+			previewFilePath = rp.Path + "-pv"
+		}
+	}
+	file, err := os.OpenFile(previewFilePath, os.O_RDONLY, 0777)
 	defer file.Close()
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-
-	if isMin == "true" {
-		// 预览最小文件
-		switch ur.FileType {
-		case utils.IMAGE:
-			previewFile, err := utils.CompressImage(file)
-			if err != nil {
-				utils.RespBadReq(writer, "出现错误1")
-				return
-			}
-			_, err = io.Copy(c.Writer, previewFile)
-			writer.WriteHeader(http.StatusOK)
-			return
-		case utils.VIDEO:
-			// 从视频中获取一帧
-			frame, err := utils.GetFrameFromVideo(rp.Path, 1)
-			if err != nil {
-				utils.RespBadReq(writer, "出现错误1")
-				return
-			}
-			// 压缩该帧
-			previewFile, err := utils.CompressImage(frame)
-			if err != nil {
-				utils.RespBadReq(writer, "出现错误2")
-				return
-			}
-			_, err = io.Copy(c.Writer, previewFile)
-			if err != nil {
-				utils.RespBadReq(writer, "出现错误3")
-				return
-			}
-			writer.WriteHeader(http.StatusOK)
-			return
-		}
-	}
-	// 除了图片和视频，都是预览整体文件
 	_, err = io.Copy(c.Writer, file)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误1")
@@ -583,5 +613,4 @@ func FilePreview(c *gin.Context) {
 	}
 	writer.WriteHeader(http.StatusOK)
 	return
-
 }

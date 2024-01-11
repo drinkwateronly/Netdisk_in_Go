@@ -61,7 +61,7 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 	// 生成token
-	token, err := utils.GenerateToken(phone, ub.UserId, 360000)
+	token, err := utils.GenerateToken(ub.Username, phone, ub.UserId, 360000)
 	if err != nil {
 		utils.RespBadReq(writer, "登陆失败，请联系管理员")
 	}
@@ -73,10 +73,13 @@ func UserLogin(c *gin.Context) {
 // CheckLogin 检查用户是否登录
 func CheckLogin(c *gin.Context) {
 	writer := c.Writer
-	_, err := utils.ParseCookieFromRequest(c)
+	uc, err := utils.ParseCookieFromRequest(c)
 	if err != nil {
 		utils.RespOK(writer, 999999, false, nil, "未登录")
 		return
 	}
-	utils.RespOK(writer, 0, true, nil, "成功") // todo:用户信息存于data中
+	utils.RespOK(writer, 0, true, gin.H{
+		"userId":   uc.UserId,
+		"username": uc.Username,
+	}, "成功") // todo:用户信息存于data中
 }
