@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"io"
 	"log"
 	"net/http"
@@ -156,16 +157,17 @@ func FileUploadPrepare(c *gin.Context) {
 	// 文件存在，进行秒传
 	// 只有最后一个点后是文件拓展名filename.filename.ext
 	ur := models.UserRepository{
-		UserFileId: utils.GenerateUUID(), // 用户文件id
-		UserId:     ub.UserId,            // 用户id
-		FileId:     rp.FileId,            // 存储池文件id
-		IsDir:      isDir,                // 是否是目录
-		FilePath:   filePath,             // 文件存储路径
-		FileName:   fileName,             // 文件名
-		FileType:   fileType,             // 文件类型
-		ExtendName: extendName,           // 文件拓展名
-		UploadTime: time.Now(),           // 上传时间
-		FileSize:   totalSize,            // 文件尺寸
+		UserFileId: utils.GenerateUUID(),                     // 用户文件id
+		UserId:     ub.UserId,                                // 用户id
+		FileId:     rp.FileId,                                // 存储池文件id
+		FilePath:   filePath,                                 // 文件存储路径
+		FileName:   fileName,                                 // 文件名
+		FileType:   fileType,                                 // 文件类型
+		ExtendName: extendName,                               // 文件拓展名
+		IsDir:      0,                                        // 是否是文件夹
+		ModifyTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
+		UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
+		FileSize:   totalSize,                                // 文件尺寸
 	}
 	// 开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
@@ -202,21 +204,16 @@ func FileUpload(c *gin.Context) {
 	totalSize, _ := strconv.ParseInt(c.PostForm("totalSize"), 10, 64)
 	totalChunks, _ := strconv.Atoi(c.PostForm("totalChunks"))
 
-	fileMD5 := c.PostForm("identifier") // 文件哈希值
-	fileName := c.PostForm("filename")  // 文件名，包括拓展名
-	//relativePath := c.PostForm("relativePath")    // 保存的相对路径
-	filePath := c.PostForm("filePath")            // 文件在用户存储区的
-	isDir, _ := strconv.Atoi(c.PostForm("isDir")) // 是否是文件夹
+	fileMD5 := c.PostForm("identifier")        // 文件哈希值
+	rqfileName := c.PostForm("filename")       // 文件名，包括拓展名
+	filePath := c.PostForm("filePath")         // 文件在用户存储区的
+	isDir := c.PostForm("isDir")               // 是否是文件夹
+	relativePath := c.PostForm("relativePath") // 相对路径，暂未使用
 
-	// 只有最后一个点后是文件拓展名filename.filename.ext
-	split := strings.Split(fileName, ".")
-	fileName = strings.Join(split[0:len(split)-1], ".")
-	extendName := split[len(split)-1]
-	fileType := utils.FileTypeId[extendName]
-	if isDir == 1 {
-		fileType = utils.DICTIONARY // 文件夹
-	} else if fileType == 0 {
-		fileType = utils.OTHER // 其他
+	chunkPath := fmt.Sprintf("./repository/chunk_file/%s-%d.chunk", fileMD5, chunkNumber)
+	if utils.IsFileExist(chunkPath) {
+		utils.RespOK(writer, 0, true, nil, "分片上传成功")
+		return
 	}
 
 	// 保存分块文件
@@ -225,7 +222,7 @@ func FileUpload(c *gin.Context) {
 		utils.RespOK(writer, 99999, false, nil, "出错或用户取消上传")
 		return
 	}
-	err = c.SaveUploadedFile(uploadedFile, fmt.Sprintf("./repository/chunk_file/%s-%d.chunk", fileMD5, chunkNumber))
+	err = c.SaveUploadedFile(uploadedFile, chunkPath)
 	if err != nil {
 		log.Println(err)
 		utils.RespBadReq(writer, "出现错误")
@@ -233,41 +230,119 @@ func FileUpload(c *gin.Context) {
 	}
 
 	if chunkNumber != totalChunks {
-		utils.RespOK(writer, 0, true, nil, "分块上传成功")
+		utils.RespOK(writer, 0, true, nil, "分片上传成功")
 		return
 	}
 
-	// 走到这里意味着最后一块分块上传完成
+	// 走到这里意味着最后一块分块上传完成，开始合并文件
+
+	// 获取文件基础信息
+	split := strings.Split(rqfileName, ".")
+	fileName := strings.Join(split[0:len(split)-1], ".")
+	// 只有最后一个点后是文件拓展名filename.filename.ext
+	extendName := split[len(split)-1]
+	fileType := utils.FileTypeId[extendName]
+	if isDir == "1" {
+		fileType = utils.DIRECTORY // 文件夹
+	} else if fileType == 0 {
+		fileType = utils.OTHER // 其他
+	}
+
 	// 获取用户信息
 	ub, isExist := models.FindUserByIdentity(uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 	}
 
+	// 此时文件以相对路径形式上传，这种形式常见于整个文件夹的上传
+	// 例如123/456/OnlyOffice.vue，接下来的步骤将按顺序创建文件夹123和456
+	if relativePath != rqfileName {
+		// 取出 [123, 456]，即文件相对路径先后进入的文件夹的列表
+		folderList := strings.Split(relativePath[:len(relativePath)-len(rqfileName)-1], "/")
+		// 若文件夹不存在，则创建，若存在，则继续
+		fmt.Fprintln(gin.DefaultWriter, "not exist file", relativePath)
+		for _, folderName := range folderList {
+			// 开启事务
+			err = utils.DB.Transaction(func(tx *gorm.DB) error {
+				// 当前文件上传的目录filePath有没有名为folderName的文件夹
+				res := utils.DB.Clauses( // 加入排他锁
+					clause.Locking{
+						Strength: "UPDATE",
+					},
+				).
+					Where("user_id = ? AND file_name = ? AND file_path = ? AND file_type = ?", ub.UserId, folderName, filePath, utils.DIRECTORY).
+					Find(&models.UserRepository{})
+				// 文件夹不存在，就创建在路径filePath的文件夹folderName
+				if res.Error != nil {
+					return res.Error
+				}
+				if res.RowsAffected == 0 {
+					err = utils.DB.
+						//Set("gorm: query_option", "FOR UPDATE").
+						Create(&models.UserRepository{
+							UserFileId: utils.GenerateUUID(),
+							UserId:     ub.UserId,
+							FilePath:   filePath,
+							FileName:   folderName,
+							FileType:   utils.DIRECTORY,
+							IsDir:      1,
+							ExtendName: "",
+							ModifyTime: time.Now().Format("2006-01-02 15:04:05"),
+							UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
+						}).Error
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				utils.RespBadReq(writer, "创建文件夹出错")
+				return
+			}
+
+			// 然后进入下一级目录，继续创建文件夹
+			if filePath == "/" {
+				filePath += folderName
+			} else {
+				filePath += "/" + folderName
+			}
+		}
+	}
+	// 最后filePath变成所要上传的文件的绝对路径，上例中，则为/123/456/
+
+	// 生成文件uuid
 	poolFileId := utils.GenerateUUID()
 	userFileId := utils.GenerateUUID()
-	savePath := fmt.Sprintf("./repository/upload_file/%s", poolFileId)
+	savePath := "./repository/upload_file/" + poolFileId
+
 	// 将分块文件合并
-	mergeFileMD5, err := utils.MergeChunkToFile(fileMD5, poolFileId, totalChunks)
-	_ = mergeFileMD5
-	//todo:实际上是需要对比两个md5值，判断文件是否上传成功，
-	//todo:但前端使用的spark-md5和后端的crypto包md5计算出来的值不同，暂时没找到解决方案。
+	err = utils.MergeChunksToFile(fileMD5, poolFileId, totalChunks)
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		utils.RespOK(writer, 99999, false, nil, "融合分片文件时出错")
 		return
 	}
+
+	// 校验md5
+	mergeMD5, err := utils.GetFileMD5FromPath(savePath)
+	if mergeMD5 != fileMD5 || err != nil {
+		utils.RespOK(writer, 99999, false, nil, "md5校验出错，文件上传失败")
+		return
+	}
+
 	// 开始写入数据库
 	ur := models.UserRepository{
 		UserFileId: userFileId, // 用户文件id
 		UserId:     ub.UserId,  // 用户id
 		FileId:     poolFileId, // 存储池文件id
-		IsDir:      isDir,      // 是否是目录
 		FilePath:   filePath,   //
 		FileName:   fileName,   // 用户存储时的文件名
 		FileType:   fileType,   // 文件类型
 		ExtendName: extendName, // 文件拓展名
 		FileSize:   totalSize,  // 文件大小
-		UploadTime: time.Now(),
+		IsDir:      0,
+		ModifyTime: time.Now().Format("2006-01-02 15:04:05"),
+		UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
 	}
 	rp := models.RepositoryPool{
 		FileId: poolFileId,
@@ -297,8 +372,8 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "文件上传成功")
-	// resp后，用户已经收到文件上传的记录
-	// 如果文件类型是图片/视频，则保存preview格式
+	// resp后，用户已经收到文件上传的结果
+	// 如果文件类型是图片/视频，则保存preview格式，方便后续前端预览
 	switch ur.FileType {
 	case utils.IMAGE:
 		// 不处理错误
@@ -307,6 +382,8 @@ func FileUpload(c *gin.Context) {
 		// 不处理错误
 		_ = utils.SavePreviewFromVideo(savePath, 5)
 	}
+	// 开始删除分片文件
+	utils.DeleteAllChunks(fileMD5, totalChunks)
 }
 
 func CreateFolder(c *gin.Context) {
@@ -333,7 +410,7 @@ func CreateFolder(c *gin.Context) {
 	}
 	// 检查是否有重名文件
 	rowsAffected := utils.DB.
-		Where("user_id = ? AND file_name = ? AND file_path = ? AND is_dir = 1", ub.UserId, r.FolderName, r.FolderPath).
+		Where("user_id = ? AND file_name = ? AND file_path = ? AND file_type = ?", ub.UserId, r.FolderName, r.FolderPath, utils.DIRECTORY).
 		Find(&models.UserRepository{}).
 		RowsAffected
 	if rowsAffected != 0 {
@@ -344,12 +421,13 @@ func CreateFolder(c *gin.Context) {
 	err = utils.DB.Create(&models.UserRepository{
 		UserFileId: utils.GenerateUUID(),
 		UserId:     ub.UserId,
-		IsDir:      1,
 		FilePath:   r.FolderPath,
 		FileName:   r.FolderName,
-		FileType:   6,
+		FileType:   utils.DIRECTORY,
+		IsDir:      1,
 		ExtendName: "",
-		UploadTime: time.Now(),
+		ModifyTime: time.Now().Format("2006-01-02 15:04:05"),
+		UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
 	}).Error
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
@@ -400,12 +478,13 @@ func CreateFile(c *gin.Context) {
 		UserFileId: userFileUUID,
 		UserId:     ub.UserId,
 		FileId:     poolFileUUID,
-		IsDir:      0,
 		FilePath:   r.FilePath,
 		FileName:   r.FileName,
 		FileType:   2,
+		IsDir:      0,
 		ExtendName: r.ExtendName,
-		UploadTime: time.Now(),
+		ModifyTime: time.Now().Format("2006-01-02 15:04:05"),
+		UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
 		FileSize:   0,
 	}
 	rp := models.RepositoryPool{
@@ -456,10 +535,38 @@ func DeleteFile(c *gin.Context) {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-	err = utils.DB.Where("user_id = ? and user_file_id = ?", ub.UserId, r.UserFileId).
-		Delete(&models.UserRepository{}).Error
+	// 如果文件不存在就删除成功了
+	ur, isExist := models.FindFileById(ub.UserId, r.UserFileId)
+	if !isExist {
+		// 找不到记录
+		utils.RespOK(writer, 0, true, nil, "删除成功")
+		return
+	}
+	// 开启事务，删除文件夹
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		if ur.FileType == utils.DIRECTORY { // 如果文件是文件夹
+			// 递归进入文件夹，删除文件夹内部的文件
+			err = models.DelAllFilesFromDir(ub.UserId, ur.FilePath, ur.FileName)
+			if err != nil {
+				return err
+			}
+			// 删除文件夹自己
+			err = utils.DB.Where("user_file_id = ?", ur.UserFileId).
+				Delete(&models.UserRepository{}).Error
+			if err != nil {
+				return err
+			}
+		} else {
+			err = utils.DB.Where("user_id = ? and user_file_id = ?", ub.UserId, r.UserFileId).
+				Delete(&models.UserRepository{}).Error
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		utils.RespOK(writer, 0, false, nil, "删除文件失败")
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "删除成功")
@@ -488,13 +595,48 @@ func DeleteFilesInBatch(c *gin.Context) {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-	UserFileIdList := strings.Split(r.UserFileIds, ",")
-
-	// db.Delete(&users, []int{1,2,3}) DELETE FROM users WHERE id IN (1,2,3);
-	err = utils.DB.Where("user_id = ? and user_file_id in ?", ub.UserId, UserFileIdList).
-		Delete(&models.UserRepository{}).Error
+	fmt.Fprintln(gin.DefaultWriter, "\"123321\"", r.UserFileIds)
+	userFileIdList := strings.Split(r.UserFileIds, ",")
+	// 开启事务，删除文件
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		// 找出这些文件信息
+		var urList []models.UserRepository
+		err = utils.DB.
+			Clauses(clause.Locking{Strength: "UPDATE"}). // 排他锁
+			Where("user_id = ? and user_file_id in ?", ub.UserId, userFileIdList).
+			Find(&urList).Error
+		if err != nil {
+			return err
+		}
+		// 循环文件
+		fmt.Fprintln(gin.DefaultWriter, "123321", urList)
+		for _, ur := range urList {
+			if ur.FileType == utils.DIRECTORY {
+				// 如果文件是文件夹
+				// 递归进入文件夹，删除文件夹内部的文件
+				err = models.DelAllFilesFromDir(ub.UserId, ur.FilePath, ur.FileName)
+				if err != nil {
+					return err
+				}
+				// 删除文件夹自己
+				err = utils.DB.Where("user_file_id = ?", ur.UserFileId).
+					Delete(&models.UserRepository{}).Error
+				if err != nil {
+					return err
+				}
+			} else {
+				// 是文件，直接删除
+				err = utils.DB.Where("user_id = ? and user_file_id = ?", ub.UserId, ur.UserFileId).
+					Delete(&models.UserRepository{}).Error
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		utils.RespOK(writer, 9999, false, nil, "删除文件失败")
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "删除成功")

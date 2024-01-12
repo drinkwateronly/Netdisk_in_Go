@@ -74,3 +74,16 @@ func TestOpenFile(t *testing.T) {
 	}
 	defer file.Close()
 }
+
+func TestMD5(t *testing.T) {
+	file, err := os.OpenFile("../repository/upload_file/13df9051-a743-4870-bc6f-4b07939d48bf", os.O_RDONLY, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	md5, err := utils.GetFileMd5(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(md5)
+}

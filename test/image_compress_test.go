@@ -13,7 +13,7 @@ func TestImageCompress(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	newFile, err := utils.CompressImage(file, 100, 50)
+	newFile, err := utils.CompressImage(file, 100, 50, "")
 	//newFile := utils.CompressImageResource(file)
 	if err != nil {
 		panic(err)

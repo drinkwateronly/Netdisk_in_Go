@@ -2,24 +2,25 @@ package models
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"netdisk_in_go/utils"
-	"time"
 )
 
 // 用户存储池
 type UserRepository struct {
 	gorm.Model
-	Id         int64     `json:"id"`
-	UserFileId string    `json:"userFileId"`
-	UserId     string    `json:"userId"`
-	FileId     string    `json:"fileId"`
-	IsDir      int       `json:"isDir"`
-	FilePath   string    `json:"filePath"`
-	FileName   string    `json:"fileName"`
-	FileType   int       `json:"fileType"`
-	ExtendName string    `json:"extendName"`
-	UploadTime time.Time `json:"uploadTime"`
-	FileSize   int64     `json:"fileSize"`
+	Id         int64  `json:"id"`
+	UserFileId string `json:"userFileId"`
+	UserId     string `json:"userId"`
+	FileId     string `json:"fileId"`
+	FilePath   string `json:"filePath"`
+	FileName   string `json:"fileName"`
+	FileType   int    `json:"fileType"`
+	ExtendName string `json:"extendName"`
+	IsDir      int    `json:"isDir"`
+	FileSize   int64  `json:"fileSize"`
+	ModifyTime string `json:"modifyTime"`
+	UploadTime string `json:"uploadTime"`
 }
 
 func (table UserRepository) TableName() string {
@@ -36,7 +37,7 @@ func FindFilesByPathAndPage(filePath, userId string, currentPage, pageCount int)
 	return files, err
 }
 
-// FindFileByPathAndName 根据文件地址文件名，查询文件是否存在
+// FindFileByNameAndPath 根据文件地址文件名，查询文件是否存在
 func FindFileByNameAndPath(userId, filePath, fileName, extendName string) (*UserRepository, bool) {
 	var ur UserRepository
 	rowsAffected := utils.DB.
@@ -83,4 +84,44 @@ func FindFilesByTypeAndPage(fileType int, userId string, currentPage, pageCount 
 	err := utils.DB.Where("user_id = ? and file_type = ?", userId, fileType).Find(&files).
 		Offset(offset).Limit(pageCount).Error
 	return files, err
+}
+
+// DelAllFilesFromDir 根据用户的id，文件夹所在的文件夹路径，文件夹名称，递归删除文件夹内的所有文件
+func DelAllFilesFromDir(userId, parentPath, dirName string) error {
+	var directoryPath string // 文件夹路径
+	// todo: 递归sql
+	// 拼接出这个文件夹的路径
+	if parentPath == "/" {
+		directoryPath = parentPath + dirName
+	} else {
+		directoryPath = parentPath + "/" + dirName
+	}
+	// 找到这个文件夹下的所有子文件，加排他锁
+	var files []UserRepository
+	err := utils.DB.Clauses(
+		clause.Locking{
+			Strength: "UPDATE",
+		},
+	).
+		Where("user_id = ? AND file_path = ?", userId, directoryPath).Find(&files).Error
+	if err != nil {
+		return err
+	}
+	// 遍历所有子文件夹
+	for _, file := range files {
+		// 如果该文件是子文件夹，则进入该子文件夹删除文件
+		if file.FileType == utils.DIRECTORY {
+			err = DelAllFilesFromDir(userId, file.FilePath, file.FileName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// 开始删除该文件夹下的所有文件
+	err = utils.DB.Where("user_id = ? and file_path = ?", userId, directoryPath).
+		Delete(&UserRepository{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

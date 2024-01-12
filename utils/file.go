@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/nfnt/resize"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"image"
@@ -21,7 +20,7 @@ const (
 	EDITABLE
 	VIDEO
 	AUDIO
-	DICTIONARY
+	DIRECTORY
 	OTHER
 )
 
@@ -184,44 +183,61 @@ func GetOfficeDocumentType(extendName string) (string, bool) {
 	return "", false
 }
 
-func MergeChunkToFile(chuckName, fileName string, totalChunks int) (string, error) {
-	// 创建一个大文集
-	myFileCopy, err := os.OpenFile("./repository/upload_file/"+fileName, os.O_CREATE|os.O_WRONLY, 0777)
+func IsFileExist(filename string) bool {
+	_, err := os.Stat(filename)
+	return os.IsExist(err)
+}
+
+func DeleteAllChunks(chuckName string, totalChunks int) {
+	for i := 1; i <= totalChunks; i++ {
+		// 检查文件是否存在
+		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
+		// 由于分片是小编号开始，所以一旦某个分片不存在，其后续编号的分片也不会存在，删除所有分片即完成
+		if IsFileExist(chunkFilePath) {
+			return
+		}
+		os.Remove(chunkFilePath)
+	}
+}
+
+func MergeChunksToFile(chuckName, fileName string, totalChunks int) error {
+	// 创建一个用于存放大文件的新文件
+	completeFile, err := os.OpenFile("./repository/upload_file/"+fileName, os.O_CREATE|os.O_RDWR, 0777)
+	defer completeFile.Close()
 	if err != nil {
-		return "", err
+		return err
 	}
 	// 记录目前文件的末尾
 	var fileEnd int64
 	// 循环所有的chunk
-	fmt.Fprint(gin.DefaultWriter, "totalChunks", totalChunks) // 打印一下
-
+	//fmt.Fprint(gin.DefaultWriter, "totalChunks", totalChunks) // 打印一下
 	for i := 1; i <= totalChunks; i++ {
-
-		// 查看chunk的文件信息
-		chuckFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
-		fileInfo, err := os.Stat(chuckFilePath)
+		// 获取分片文件大小
+		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
+		fileInfo, err := os.Stat(chunkFilePath)
 		if err != nil {
-			return "", err
+			return err
 		}
 		b := make([]byte, fileInfo.Size())
-
-		// 打开chuck文件
-		f, err := os.OpenFile(chuckFilePath, os.O_RDONLY, 0777)
+		// 读取分片
+		chunkFile, err := os.OpenFile(chunkFilePath, os.O_RDONLY, 0777)
 		if err != nil {
 			MyLog.Println(err)
-			return "", err
+			return err
 		}
-		f.Read(b)
-		myFileCopy.Seek(fileEnd, 0)
-		myFileCopy.Write(b)
-		f.Close()
+		// 读取分片文件
+		chunkFile.Read(b)
+		// 往大文件尾部填充分片
+		completeFile.Seek(fileEnd, 0)
+		completeFile.Write(b)
+		// 可以直接关闭分片
+		chunkFile.Close()
+		// 更新大文件尾部指针
 		fileEnd += fileInfo.Size()
 	}
-	myFileCopy.Close()
-	fileByte, _ := io.ReadAll(myFileCopy)
-	fileMD5 := Md5EncodeByte(fileByte)
-
-	return fileMD5, nil
+	// 计算文件md5值，如果直接将此处拼接的文件计算md5，似乎并不正确，todo:调查原因
+	//fileMD5, err := GetFileMd5(completeFile)
+	return nil
 }
 
 // GetFrameFromVideo 读取路径的视频文件，并截取frameIndex对应帧
