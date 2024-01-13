@@ -57,7 +57,9 @@ func Router() *gin.Engine {
 
 	//回收站
 	//recoveryAPI := r.Group("")
-	r.GET("recoveryfile/list", service.GetRecoveryList)
+	r.GET("recoveryfile/list", service.GetRecoveryFileList)
+	r.POST("recoveryfile/deleterecoveryfile", service.DelRecoveryFile)
+	r.POST("recoveryfile/batchdelete", service.DelRecoveryFileInBatch)
 	return r
 
 }

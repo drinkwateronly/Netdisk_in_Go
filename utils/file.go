@@ -183,22 +183,22 @@ func GetOfficeDocumentType(extendName string) (string, bool) {
 	return "", false
 }
 
-func IsFileExist(filename string) bool {
-	_, err := os.Stat(filename)
-	return os.IsExist(err)
+func IsChunkExist(filename string, currentChunkSize int64) bool {
+	fileInfo, err := os.Stat(filename)
+	return !os.IsNotExist(err) && fileInfo.Size() == currentChunkSize
 }
 
-func DeleteAllChunks(chuckName string, totalChunks int) {
-	for i := 1; i <= totalChunks; i++ {
-		// 检查文件是否存在
-		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
-		// 由于分片是小编号开始，所以一旦某个分片不存在，其后续编号的分片也不会存在，删除所有分片即完成
-		if IsFileExist(chunkFilePath) {
-			return
-		}
-		os.Remove(chunkFilePath)
-	}
-}
+//func DeleteAllChunks(chuckName string, totalChunks int) {
+//	for i := 1; i <= totalChunks; i++ {
+//		// 检查文件是否存在
+//		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
+//		// 由于分片是小编号开始，所以一旦某个分片不存在，其后续编号的分片也不会存在，删除所有分片即完成
+//		if IsFileExist(chunkFilePath) {
+//			return
+//		}
+//		os.Remove(chunkFilePath)
+//	}
+//}
 
 func MergeChunksToFile(chuckName, fileName string, totalChunks int) error {
 	// 创建一个用于存放大文件的新文件

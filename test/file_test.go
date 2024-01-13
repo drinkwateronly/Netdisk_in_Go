@@ -87,3 +87,13 @@ func TestMD5(t *testing.T) {
 	}
 	fmt.Println(md5)
 }
+
+func TestFileIsExist(t *testing.T) {
+	info, err := os.Stat("./file_test.go")
+	if os.IsNotExist(err) {
+		t.Fatal("文件不存在，但实际存在")
+	} else {
+		fmt.Println(info.Size())
+	}
+
+}
