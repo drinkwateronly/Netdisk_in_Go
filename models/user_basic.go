@@ -1,6 +1,9 @@
 package models
 
 import (
+	"errors"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"netdisk_in_go/utils"
 )
@@ -47,4 +50,19 @@ func FindUserByIdentity(userId string) (*UserBasic, bool) {
 		return nil, false
 	}
 	return &ub, true
+}
+
+func GetUserFromCoookie(c *gin.Context) (*UserBasic, error) {
+	// 校验cookie
+	uc, isAuth := utils.CheckCookie(c)
+	fmt.Fprintf(gin.DefaultWriter, "%v", uc)
+	if !isAuth {
+		return nil, errors.New("cookie校验失败")
+	}
+	// 获取用户信息
+	ub, isExist := FindUserByIdentity(uc.UserId)
+	if !isExist {
+		return nil, errors.New("用户不存在")
+	}
+	return ub, nil
 }

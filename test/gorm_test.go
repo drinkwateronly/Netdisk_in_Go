@@ -18,6 +18,7 @@ func TestGorm(t *testing.T) {
 	db.AutoMigrate(&models.UserBasic{})
 	db.AutoMigrate(&models.UserRepository{})
 	db.AutoMigrate(&models.RepositoryPool{})
+	db.AutoMigrate(&models.RecoveryBatch{})
 	//user := &models.UserBasic{
 	//	Name: "chenjie",
 	//}

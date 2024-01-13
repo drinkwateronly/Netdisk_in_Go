@@ -54,6 +54,10 @@ func Router() *gin.Engine {
 	officeAPI.GET("/filedownload", service.OfficeFileDownload)
 	officeAPI.GET("/preview", service.OfficeFilePreview)
 	officeAPI.POST("/callback", service.OfficeCallback)
+
+	//回收站
+	//recoveryAPI := r.Group("")
+	r.GET("recoveryfile/list", service.GetRecoveryList)
 	return r
 
 }

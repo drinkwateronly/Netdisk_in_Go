@@ -516,37 +516,33 @@ func CreateFile(c *gin.Context) {
 func DeleteFile(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
+	ub, err := models.GetUserFromCoookie(c)
+	if err != nil {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-	}
-	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
 	}
 
 	type DeleteFileRequest struct {
 		UserFileId string `json:"userFileId"`
 	}
 	var r DeleteFileRequest
-	err := c.ShouldBind(&r)
+	err = c.ShouldBind(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-	// 如果文件不存在就删除成功了
+	// 如果文件不存在，删除失败
 	ur, isExist := models.FindFileById(ub.UserId, r.UserFileId)
 	if !isExist {
 		// 找不到记录
-		utils.RespOK(writer, 0, true, nil, "删除成功")
+		utils.RespOK(writer, 1, false, nil, "文件不存在")
 		return
 	}
 	// 开启事务，删除文件夹
+	delBatchId := utils.GenerateUUID()
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
 		if ur.FileType == utils.DIRECTORY { // 如果文件是文件夹
 			// 递归进入文件夹，删除文件夹内部的文件
-			err = models.DelAllFilesFromDir(ub.UserId, ur.FilePath, ur.FileName)
+			err = models.DelAllFilesFromDir(delBatchId, ub.UserId, ur.FilePath, ur.FileName)
 			if err != nil {
 				return err
 			}
@@ -558,12 +554,14 @@ func DeleteFile(c *gin.Context) {
 			}
 		} else {
 			err = utils.DB.Where("user_id = ? and user_file_id = ?", ub.UserId, r.UserFileId).
-				Delete(&models.UserRepository{}).Error
+				Updates(&models.UserRepository{}).Error
 			if err != nil {
 				return err
 			}
 		}
-		return nil
+		// 添加到回收站
+		err = models.AddFileToRecoveryBatch(ur, delBatchId)
+		return err
 	})
 	if err != nil {
 		utils.RespOK(writer, 0, false, nil, "删除文件失败")
@@ -595,12 +593,12 @@ func DeleteFilesInBatch(c *gin.Context) {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
-	fmt.Fprintln(gin.DefaultWriter, "\"123321\"", r.UserFileIds)
 	userFileIdList := strings.Split(r.UserFileIds, ",")
 	// 开启事务，删除文件
+	delBatchId := utils.GenerateUUID()
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
 		// 找出这些文件信息
-		var urList []models.UserRepository
+		var urList []*models.UserRepository
 		err = utils.DB.
 			Clauses(clause.Locking{Strength: "UPDATE"}). // 排他锁
 			Where("user_id = ? and user_file_id in ?", ub.UserId, userFileIdList).
@@ -609,28 +607,30 @@ func DeleteFilesInBatch(c *gin.Context) {
 			return err
 		}
 		// 循环文件
-		fmt.Fprintln(gin.DefaultWriter, "123321", urList)
 		for _, ur := range urList {
 			if ur.FileType == utils.DIRECTORY {
 				// 如果文件是文件夹
 				// 递归进入文件夹，删除文件夹内部的文件
-				err = models.DelAllFilesFromDir(ub.UserId, ur.FilePath, ur.FileName)
+				err = models.DelAllFilesFromDir(delBatchId, ub.UserId, ur.FilePath, ur.FileName)
 				if err != nil {
 					return err
 				}
-				// 删除文件夹自己
-				err = utils.DB.Where("user_file_id = ?", ur.UserFileId).
-					Delete(&models.UserRepository{}).Error
+				// 删除文件夹自己记录
+				err = models.SoftDelUserFiles(delBatchId, ub.UserId, ur.UserFileId)
 				if err != nil {
 					return err
 				}
 			} else {
 				// 是文件，直接删除
-				err = utils.DB.Where("user_id = ? and user_file_id = ?", ub.UserId, ur.UserFileId).
-					Delete(&models.UserRepository{}).Error
+				err = models.SoftDelUserFiles(delBatchId, ub.UserId, ur.UserFileId)
 				if err != nil {
 					return err
 				}
+			}
+			// 添加到回收站
+			err = models.AddFileToRecoveryBatch(ur, delBatchId)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
@@ -755,4 +755,20 @@ func FilePreview(c *gin.Context) {
 	}
 	writer.WriteHeader(http.StatusOK)
 	return
+}
+
+// 查看回收站文件
+func GetRecoveryList(c *gin.Context) {
+	writer := c.Writer
+	// 校验cookie，获取用户信息
+	ub, err := models.GetUserFromCoookie(c)
+	if err != nil {
+		utils.RespBadReq(writer, "用户校验失败")
+		return
+	}
+	var recoveryFiles []models.RecoveryBatch
+	utils.DB.
+		Where("user_id = ?", ub.UserId).
+		Find(&recoveryFiles)
+	utils.RespOkWithDataList(writer, 0, recoveryFiles, len(recoveryFiles), "文件列表")
 }

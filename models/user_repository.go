@@ -4,23 +4,24 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"netdisk_in_go/utils"
+	"time"
 )
 
 // 用户存储池
 type UserRepository struct {
 	gorm.Model
-	Id         int64  `json:"id"`
-	UserFileId string `json:"userFileId"`
-	UserId     string `json:"userId"`
-	FileId     string `json:"fileId"`
-	FilePath   string `json:"filePath"`
-	FileName   string `json:"fileName"`
-	FileType   int    `json:"fileType"`
-	ExtendName string `json:"extendName"`
-	IsDir      int    `json:"isDir"`
-	FileSize   int64  `json:"fileSize"`
-	ModifyTime string `json:"modifyTime"`
-	UploadTime string `json:"uploadTime"`
+	UserFileId    string `json:"userFileId"`
+	UserId        string `json:"userId"`
+	FileId        string `json:"fileId"`
+	FilePath      string `json:"filePath"`
+	FileName      string `json:"fileName"`
+	FileType      int    `json:"fileType"`
+	DeleteBatchId string `json:"deleteBatchNum"`
+	ExtendName    string `json:"extendName"`
+	IsDir         int    `json:"isDir"`
+	FileSize      int64  `json:"fileSize"`
+	ModifyTime    string `json:"modifyTime"`
+	UploadTime    string `json:"uploadTime"`
 }
 
 func (table UserRepository) TableName() string {
@@ -87,7 +88,7 @@ func FindFilesByTypeAndPage(fileType int, userId string, currentPage, pageCount 
 }
 
 // DelAllFilesFromDir 根据用户的id，文件夹所在的文件夹路径，文件夹名称，递归删除文件夹内的所有文件
-func DelAllFilesFromDir(userId, parentPath, dirName string) error {
+func DelAllFilesFromDir(delBatchId, userId, parentPath, dirName string) error {
 	var directoryPath string // 文件夹路径
 	// todo: 递归sql
 	// 拼接出这个文件夹的路径
@@ -107,21 +108,39 @@ func DelAllFilesFromDir(userId, parentPath, dirName string) error {
 	if err != nil {
 		return err
 	}
+	//
+	userFileIds := make([]string, len(files))
 	// 遍历所有子文件夹
-	for _, file := range files {
+	for i, file := range files {
 		// 如果该文件是子文件夹，则进入该子文件夹删除文件
 		if file.FileType == utils.DIRECTORY {
-			err = DelAllFilesFromDir(userId, file.FilePath, file.FileName)
+			err = DelAllFilesFromDir(delBatchId, userId, file.FilePath, file.FileName)
 			if err != nil {
 				return err
 			}
 		}
+		// 记录该文件夹下的文件id
+		userFileIds[i] = file.UserFileId
 	}
 	// 开始删除该文件夹下的所有文件
-	err = utils.DB.Where("user_id = ? and file_path = ?", userId, directoryPath).
-		Delete(&UserRepository{}).Error
+	err = SoftDelUserFiles(delBatchId, userId, userFileIds...)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// SoftDelUserFiles 根据userId, userFileId，将单个/多个用户文件记录软删除，并为记录设置delBatchId
+func SoftDelUserFiles(delBatchId, userId string, userFileIds ...string) error {
+	err := utils.DB.Where("user_id = ? and user_file_id in ?", userId, userFileIds).
+		Updates(&UserRepository{
+			Model: gorm.Model{ // 软删除
+				DeletedAt: gorm.DeletedAt{
+					Time:  time.Now(),
+					Valid: true,
+				},
+			},
+			DeleteBatchId: delBatchId, // 设置delBatchId
+		}).Error
+	return err
 }
