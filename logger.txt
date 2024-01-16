@@ -1,3 +1,4 @@
 [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
 Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
 [GIN-debug] Listening and serving HTTP on :8080
+&{大陈 18927841103 4bc41c2b-6c6e-4dcb-abf0-340dfe74c954 {CHENJIE  [] 2024-01-20 19:59:58 +0800 CST 2024-01-16 15:59:58 +0800 CST <nil> }}&{大陈 18927841103 4bc41c2b-6c6e-4dcb-abf0-340dfe74c954 {CHENJIE  [] 2024-01-20 19:59:58 +0800 CST 2024-01-16 15:59:58 +0800 CST <nil> }}&{大陈 18927841103 4bc41c2b-6c6e-4dcb-abf0-340dfe74c954 {CHENJIE  [] 2024-01-20 19:59:58 +0800 CST 2024-01-16 15:59:58 +0800 CST <nil> }}&{大陈 18927841103 4bc41c2b-6c6e-4dcb-abf0-340dfe74c954 {CHENJIE  [] 2024-01-20 19:59:58 +0800 CST 2024-01-16 15:59:58 +0800 CST <nil> }}&{大陈 18927841103 4bc41c2b-6c6e-4dcb-abf0-340dfe74c954 {CHENJIE  [] 2024-01-20 19:59:58 +0800 CST 2024-01-16 15:59:58 +0800 CST <nil> }}

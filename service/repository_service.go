@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -73,17 +74,18 @@ func GetUserFileList(c *gin.Context) {
 	}
 
 	var files []models.UserRepository
+	var filesNum int
 	if fileType == 0 {
 		files, err = models.FindFilesByPathAndPage(filePath, ub.UserId, currentPage, pageCount)
 	} else {
-		files, err = models.FindFilesByTypeAndPage(fileType, ub.UserId, currentPage, pageCount)
+		files, filesNum, err = models.FindFilesByTypeAndPage(fileType, ub.UserId, currentPage, pageCount)
 	}
 
 	if err != gorm.ErrRecordNotFound && err != nil {
 		utils.RespBadReq(writer, "参数错误")
 		return
 	}
-	utils.RespOkWithDataList(writer, 0, files, len(files), "文件列表")
+	utils.RespOkWithDataList(writer, 0, files, int(filesNum), "文件列表")
 }
 
 func FileUploadPrepare(c *gin.Context) {
@@ -436,6 +438,7 @@ func FileUpload(c *gin.Context) {
 	//utils.DeleteAllChunks(fileMD5, totalChunks)
 }
 
+// CreateFolder 文件上传
 func CreateFolder(c *gin.Context) {
 	type CreateFolderRequest struct {
 		FolderName string `json:"fileName"`
@@ -484,6 +487,97 @@ func CreateFolder(c *gin.Context) {
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "创建文件夹成功")
+}
+
+// MoveFile 文件移动
+func MoveFile(c *gin.Context) {
+	type MoveFileRequest struct {
+		FilePath   string `json:"filePath"`
+		UserFileId string `json:"userFileId"`
+	}
+	ub, err := models.GetUserFromCoookie(c)
+	writer := c.Writer
+	if err != nil {
+		utils.RespBadReq(writer, "用户不存在")
+		return
+	}
+	var req MoveFileRequest
+	err = c.ShouldBind(&req)
+	if err != nil {
+		utils.RespBadReq(writer, "出现错误")
+		return
+	}
+
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		ur, isExist := models.FindFileById(ub.UserId, req.UserFileId)
+		if !isExist {
+			return errors.New("文件不存在")
+		}
+		// 找要移动的目录有无同
+		res := utils.DB.Where("user_id = ? AND file_path = ? AND file_name = ? AND is_dir = 0", ub.UserId, req.FilePath, ur.FileName)
+		if res.RowsAffected != 0 {
+			return errors.New("该目录下同名文件已存在")
+		}
+		if err != nil {
+			return err
+		}
+		if err := utils.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
+			Updates(&models.UserRepository{FilePath: req.FilePath}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		utils.RespOK(writer, 999999, false, nil, err.Error())
+		return
+	}
+	utils.RespOK(writer, 0, true, nil, "文件移动成功")
+}
+
+// RenameFile 文件重命名
+func RenameFile(c *gin.Context) {
+	type RenameFileRequest struct {
+		FileName   string `json:"fileName"`
+		UserFileId string `json:"userFileId"`
+	}
+	ub, err := models.GetUserFromCoookie(c)
+	writer := c.Writer
+	if err != nil {
+		utils.RespBadReq(writer, "用户不存在")
+		return
+	}
+	var req RenameFileRequest
+	err = c.ShouldBind(&req)
+	if err != nil {
+		utils.RespBadReq(writer, "出现错误")
+		return
+	}
+	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"") {
+		utils.RespOK(writer, 999999, false, nil, "命名失败，文件名称出现非法字符")
+		return
+	}
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		ur, isExist := models.FindFileById(ub.UserId, req.UserFileId)
+		if !isExist {
+			return errors.New("文件不存在")
+		}
+		res := utils.DB.Where("user_id = ? AND file_path = ? AND file_name = ? AND user_file_id != ?", ub.UserId, ur.FilePath, req.FileName, req.UserFileId)
+		if res.RowsAffected != 0 {
+			return errors.New("该目录下同名文件已存在")
+		}
+		if err != nil {
+			return err
+		}
+		if err := utils.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).Updates(models.UserRepository{FileName: req.FileName}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		utils.RespOK(writer, 999999, false, nil, err.Error())
+		return
+	}
+	utils.RespOK(writer, 0, true, nil, "文件名修改成功")
 }
 
 // CreateFile 创建文件
@@ -690,6 +784,28 @@ func DeleteFilesInBatch(c *gin.Context) {
 		return
 	}
 	utils.RespOK(writer, 0, true, nil, "删除成功")
+}
+
+// GetFileTree
+func GetFileTree(c *gin.Context) {
+	writer := c.Writer
+	ub, err := models.GetUserFromCoookie(c)
+	if err != nil {
+		utils.RespOK(writer, 99999, false, nil, "用户校验失败")
+	}
+	var root *models.FileTreeNode
+	err = utils.DB.Transaction(func(tx *gorm.DB) error {
+		root, err = models.GetFileTreeFromDIr(ub.UserId, "", "", "/")
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		utils.RespOK(writer, 99990, false, root, "失败")
+		return
+	}
+	utils.RespOK(writer, 0, true, root, "成功")
 }
 
 func FileDownload(c *gin.Context) {

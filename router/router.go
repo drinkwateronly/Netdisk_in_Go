@@ -47,6 +47,9 @@ func Router() *gin.Engine {
 	fileAPI.POST("/createFile", service.CreateFile)
 	fileAPI.POST("/deletefile", service.DeleteFile)
 	fileAPI.POST("/batchdeletefile", service.DeleteFilesInBatch)
+	fileAPI.POST("/renamefile", service.RenameFile)
+	fileAPI.GET("/getfiletree", service.GetFileTree)
+	fileAPI.POST("/movefile", service.MoveFile)
 
 	// office
 	officeAPI := r.Group("office")
