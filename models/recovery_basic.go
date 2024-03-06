@@ -7,27 +7,27 @@ import (
 )
 
 // 回收站文件
-type RecoveryBatch struct {
+type RecoveryBasic struct {
 	gorm.Model
 	UserFileId    string `json:"userFileId"`
 	UserId        string `json:"userId"`
 	DeleteBatchId string `json:"deleteBatchNum"`
 	FilePath      string `json:"filePath"`
 	FileName      string `json:"fileName"`
-	FileType      int    `json:"fileType"`
+	FileType      uint8  `json:"fileType"`
 	ExtendName    string `json:"extendName"`
-	IsDir         int    `json:"isDir"`
-	FileSize      int64  `json:"fileSize"`
+	IsDir         uint8  `json:"isDir"`
+	FileSize      uint64 `json:"fileSize"`
 	DeleteTime    string `json:"deleteTime"`
 	UploadTime    string `json:"uploadTime"`
 }
 
-func (RecoveryBatch) TableName() string {
+func (RecoveryBasic) TableName() string {
 	return "recovery_batch"
 }
 
 func AddFileToRecoveryBatch(ur *UserRepository, delBatchId string) error {
-	rb := RecoveryBatch{
+	rb := RecoveryBasic{
 		UserFileId:    ur.UserFileId,
 		UserId:        ur.UserId,
 		DeleteBatchId: delBatchId,

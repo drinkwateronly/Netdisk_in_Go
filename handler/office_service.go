@@ -1,4 +1,4 @@
-package service
+package handler
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"netdisk_in_go/models"
-	"netdisk_in_go/officemodels"
+	"netdisk_in_go/office_models"
 	"netdisk_in_go/utils"
 	"os"
 )
@@ -20,7 +20,7 @@ func PreviewOfficeFile(c *gin.Context) {
 	uc, _ := utils.ParseCookie(cookie)
 
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(uc.UserId)
+	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return
@@ -34,7 +34,7 @@ func PreviewOfficeFile(c *gin.Context) {
 	}
 	userFileId := json["userFileId"].(string)
 	// 查询用户文件基本信息
-	rb, isExist := models.FindFileById(ub.UserId, userFileId)
+	rb, isExist := models.FindUserFileById(ub.UserId, userFileId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户信息不存在")
 		return
@@ -42,26 +42,26 @@ func PreviewOfficeFile(c *gin.Context) {
 
 	// 根据API返回必要的信息
 	// https://api.onlyoffice.com/editors/config/editor
-	document := officemodels.Document{
+	document := office_models.Document{
 		FileType: rb.ExtendName, // 文件拓展名
-		Info: officemodels.Info{
+		Info: office_models.Info{
 			Owner:  "Me",
 			Upload: rb.UpdatedAt.Format("Mon Jan 02 2006"),
 		},
-		Key:         "",                                                                // todo: 看看有无其他用法
-		Permissions: officemodels.DefaultPermissions,                                   // 使用默认的 Permissions
-		Title:       rb.FileName + "." + rb.ExtendName,                                 // 文件完整名
-		Url:         fmt.Sprintf(officemodels.PreviewUrlFormat, rb.UserFileId, cookie), // 文件预览链接
-		UserFileId:  rb.FileId,                                                         // 文件id
+		Key:         "",                                                                 // todo: 看看有无其他用法
+		Permissions: office_models.DefaultPermissions,                                   // 使用默认的 Permissions
+		Title:       rb.FileName + "." + rb.ExtendName,                                  // 文件完整名
+		Url:         fmt.Sprintf(office_models.PreviewUrlFormat, rb.UserFileId, cookie), // 文件预览链接
+		UserFileId:  rb.FileId,                                                          // 文件id
 	}
-	user := officemodels.User{
+	user := office_models.User{
 		Id:    uc.UserId,
 		Name:  uc.UserId,
 		Group: "",
 	}
 	documentType, _ := utils.GetOfficeDocumentType(rb.ExtendName)
 
-	utils.RespOK(writer, 200, true, officemodels.NewData(user, cookie, document, documentType), "获取报告成功！")
+	utils.RespOK(writer, 200, true, office_models.NewData(user, cookie, document, documentType), "获取报告成功！")
 	return
 }
 
@@ -87,7 +87,7 @@ func OfficeCallback(c *gin.Context) {
 	writer := c.Writer
 
 	// 获取post请求body中的参数
-	var callbackHandler officemodels.CallbackHandler
+	var callbackHandler office_models.CallbackHandler
 	c.ShouldBindJSON(&callbackHandler)
 	fmt.Fprintf(gin.DefaultWriter, "%+v", callbackHandler) // 打印一下
 	switch callbackHandler.Status {
@@ -156,21 +156,21 @@ func OfficeFilePreview(c *gin.Context) {
 	uc, err := utils.ParseCookie(cookie)
 
 	if err != nil {
-		utils.RespOK(writer, 0, true, officemodels.OfficeError{Error: 1}, "cookie校验失败")
+		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "cookie校验失败")
 		return
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(uc.UserId)
+	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
-		utils.RespOK(writer, 0, true, officemodels.OfficeError{Error: 1}, "用户不存在")
+		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "用户不存在")
 		return
 	}
 	// 处理请求参数
 
 	// 获取文件
-	rp, isExist := models.FindFileSavePathById(ub.UserId, userFileId)
+	rp, isExist := models.FindRepFileByUserFileId(ub.UserId, userFileId)
 	if !isExist {
-		utils.RespOK(writer, 0, true, officemodels.OfficeError{Error: 1}, "文件不存在")
+		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "文件不存在")
 		return
 	}
 
@@ -178,9 +178,9 @@ func OfficeFilePreview(c *gin.Context) {
 	defer file.Close()
 	_, err = io.Copy(c.Writer, file)
 	if err != nil {
-		utils.RespOK(writer, 0, true, officemodels.OfficeError{Error: 1}, "出错")
+		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "出错")
 		return
 	}
-	utils.RespOK(writer, 0, true, officemodels.OfficeError{Error: 0}, "下载成功")
+	utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 0}, "下载成功")
 
 }

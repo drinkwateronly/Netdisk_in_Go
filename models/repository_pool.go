@@ -8,10 +8,9 @@ import (
 // 中心存储池
 type RepositoryPool struct {
 	gorm.Model
-	Id     int64
 	FileId string
 	Hash   string
-	Size   int64
+	Size   uint64
 	Path   string
 }
 

@@ -1,13 +1,8 @@
 package utils
 
-import (
-	"fmt"
-	"math/rand"
-)
-
 // MakeSalt 随机生成盐，todo:换成更好的算法
 func MakeSalt() string {
-	return fmt.Sprintf("%06d", rand.Int31())
+	return GenerateUUID()
 }
 
 // MakePassword 生成记录在数据库的密码

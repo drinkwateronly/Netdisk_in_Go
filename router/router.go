@@ -5,7 +5,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
 	docs "netdisk_in_go/docs"
-	"netdisk_in_go/service"
+	"netdisk_in_go/handler"
 )
 
 func Router() *gin.Engine {
@@ -20,49 +20,57 @@ func Router() *gin.Engine {
 		context.Writer.Write([]byte("/helloworld"))
 	})
 
-	r.GET("/notice/list", service.NoticeList)
-	r.GET("/param/grouplist", service.GetCopyright)
+	r.GET("/notice/list", handler.NoticeList)
+	r.GET("/param/grouplist", handler.GetCopyright)
 
 	// 用户
-	r.GET("/user/login", service.UserLogin)
-	r.POST("/user/register", service.UserRegister)
-	r.GET("/user/checkuserlogininfo", service.CheckLogin)
+	r.GET("/user/login", handler.UserLogin)
+	r.POST("/user/register", handler.UserRegister)
+	r.GET("/user/checkuserlogininfo", handler.CheckLogin)
 
 	// 存储
-	r.GET("/filetransfer/getstorage", service.GetUserStorage)
-	r.GET("/file/getfilelist", service.GetUserFileList)
-	r.GET("/filetransfer/uploadfile", service.FileUploadPrepare)
-	r.POST("/filetransfer/uploadfile", service.FileUpload)
+	r.GET("/filetransfer/getstorage", handler.GetUserStorage)
+	r.GET("/file/getfilelist", handler.GetUserFileList)
+	r.GET("/filetransfer/uploadfile", handler.FileUploadPrepare)
+	r.POST("/filetransfer/uploadfile", handler.FileUpload)
 
-	// 下载
-	r.GET("/filetransfer/downloadfile", service.FileDownload)
+	// 文件下载
+	r.GET("/filetransfer/downloadfile", handler.FileDownload)
+	r.GET("/filetransfer/batchDownloadFile", handler.FileDownloadInBatch)
 
 	// 文件操作
-	r.GET("/filetransfer/preview", service.FilePreview)
+	r.GET("/filetransfer/preview", handler.FilePreview)
 
 	// 文件夹操作
 	fileAPI := r.Group("file")
-	fileAPI.Use(service.Authentication)
-	fileAPI.POST("/createFold", service.CreateFolder)
-	fileAPI.POST("/createFile", service.CreateFile)
-	fileAPI.POST("/deletefile", service.DeleteFile)
-	fileAPI.POST("/batchdeletefile", service.DeleteFilesInBatch)
-	fileAPI.POST("/renamefile", service.RenameFile)
-	fileAPI.GET("/getfiletree", service.GetFileTree)
-	fileAPI.POST("/movefile", service.MoveFile)
+	fileAPI.Use(handler.Authentication)
+	fileAPI.POST("/createFold", handler.CreateFolder)
+	fileAPI.POST("/createFile", handler.CreateFile)
+	fileAPI.POST("/deletefile", handler.DeleteFile)
+	fileAPI.POST("/batchdeletefile", handler.DeleteFilesInBatch)
+	fileAPI.POST("/renamefile", handler.RenameFile)
+	fileAPI.GET("/getfiletree", handler.GetFileTree)
+	fileAPI.POST("/movefile", handler.MoveFile)
 
 	// office
 	officeAPI := r.Group("office")
-	officeAPI.POST("/previewofficefile", service.PreviewOfficeFile)
-	officeAPI.GET("/filedownload", service.OfficeFileDownload)
-	officeAPI.GET("/preview", service.OfficeFilePreview)
-	officeAPI.POST("/callback", service.OfficeCallback)
+	officeAPI.POST("/previewofficefile", handler.PreviewOfficeFile)
+	officeAPI.GET("/filedownload", handler.OfficeFileDownload)
+	officeAPI.GET("/preview", handler.OfficeFilePreview)
+	officeAPI.POST("/callback", handler.OfficeCallback)
 
 	//回收站
 	//recoveryAPI := r.Group("")
-	r.GET("recoveryfile/list", service.GetRecoveryFileList)
-	r.POST("recoveryfile/deleterecoveryfile", service.DelRecoveryFile)
-	r.POST("recoveryfile/batchdelete", service.DelRecoveryFileInBatch)
-	return r
+	r.GET("recoveryfile/list", handler.GetRecoveryFileList)
+	r.POST("recoveryfile/deleterecoveryfile", handler.DelRecoveryFile)
+	r.POST("recoveryfile/batchdelete", handler.DelRecoveryFileInBatch)
 
+	// 文件分析
+	r.POST("share/sharefile", handler.ShareFiles)
+	r.GET("/share/checkendtime", handler.CheckShareEndTime)
+	r.GET("/share/sharetype", handler.CheckShareType)
+	r.GET("/share/checkextractioncode", handler.CheckShareExtractionCode)
+	r.GET("/share/sharefileList", handler.GetShareFileList)
+	r.POST("share/savesharefile", handler.SaveShareFile)
+	return r
 }

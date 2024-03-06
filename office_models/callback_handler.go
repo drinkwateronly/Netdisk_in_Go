@@ -1,4 +1,4 @@
-package officemodels
+package office_models
 
 type CallbackHandler struct {
 	Actions       []map[string]string `json:"actions"`        // actions:[map[type:1 userid:001]]

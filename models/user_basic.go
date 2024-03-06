@@ -11,15 +11,15 @@ import (
 type UserBasic struct {
 	gorm.Model
 	//Account  string `valid:"matches(^[a-zA-Z0-9]{6,}$)"` // 账号，数字或字母，6~20位
+	UserId           string
+	UserType         uint8
 	Username         string
 	Password         string
-	Salt             string
 	Phone            string
 	Email            string
-	UserId           string
-	UserType         uint
-	TotalStorageSize int64 // 总存储量，byte为单位
-	StorageSize      int64 // 已使用存储量，byte为单位
+	TotalStorageSize uint64 // 总存储量，byte为单位
+	StorageSize      uint64 // 已使用存储量，byte为单位
+	Salt             string
 	//ClientIp      string
 	//ClientPort    string
 	//IsLoginOut    bool      `gorm:"column:is_login_out" json:"is_login_out"`
@@ -30,29 +30,25 @@ func (table *UserBasic) TableName() string {
 	return "user_basic"
 }
 
-func CreateUser(ub *UserBasic) *gorm.DB {
-	return utils.DB.Create(ub)
+func FindUserByPhone(DB *gorm.DB, phone string) (*UserBasic, bool) {
+	ub := UserBasic{}
+	res := DB.Where("phone = ?", phone).Find(&ub)
+	if res.RowsAffected == 0 || res.Error != nil { // 用户不存在
+		return nil, false
+	}
+	return &ub, true
 }
 
-func FindUserByPhone(phone string) (*UserBasic, bool) {
+func FindUserByIdentity(db *gorm.DB, userId string) (*UserBasic, bool) {
 	ub := UserBasic{}
-	rowAffected := utils.DB.Where("phone = ?", phone).Find(&ub).RowsAffected
+	rowAffected := db.Where("user_id = ?", userId).Find(&ub).RowsAffected
 	if rowAffected == 0 { // 用户不存在
 		return nil, false
 	}
 	return &ub, true
 }
 
-func FindUserByIdentity(userId string) (*UserBasic, bool) {
-	ub := UserBasic{}
-	rowAffected := utils.DB.Where("user_id = ?", userId).Find(&ub).RowsAffected
-	if rowAffected == 0 { // 用户不存在
-		return nil, false
-	}
-	return &ub, true
-}
-
-func GetUserFromCoookie(c *gin.Context) (*UserBasic, error) {
+func GetUserFromCoookie(db *gorm.DB, c *gin.Context) (*UserBasic, error) {
 	// 校验cookie
 	uc, isAuth := utils.CheckCookie(c)
 	fmt.Fprintf(gin.DefaultWriter, "%v", uc)
@@ -60,7 +56,7 @@ func GetUserFromCoookie(c *gin.Context) (*UserBasic, error) {
 		return nil, errors.New("cookie校验失败")
 	}
 	// 获取用户信息
-	ub, isExist := FindUserByIdentity(uc.UserId)
+	ub, isExist := FindUserByIdentity(db, uc.UserId)
 	if !isExist {
 		return nil, errors.New("用户不存在")
 	}

@@ -16,3 +16,9 @@ func TestPassword(t *testing.T) {
 		t.Error("password validation failed")
 	}
 }
+
+func TestCode(t *testing.T) {
+
+	fmt.Println(utils.GenerateRandCode())
+	fmt.Println(utils.GenerateRandCode())
+}

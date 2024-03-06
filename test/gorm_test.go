@@ -18,7 +18,10 @@ func TestGorm(t *testing.T) {
 	db.AutoMigrate(&models.UserBasic{})
 	db.AutoMigrate(&models.UserRepository{})
 	db.AutoMigrate(&models.RepositoryPool{})
-	db.AutoMigrate(&models.RecoveryBatch{})
+	db.AutoMigrate(&models.RecoveryBasic{})
+	db.AutoMigrate(&models.ShareRepository{})
+	db.AutoMigrate(&models.ShareBasic{})
+
 	//user := &models.UserBasic{
 	//	Name: "chenjie",
 	//}
@@ -34,9 +37,27 @@ func TestGorm(t *testing.T) {
 
 func TestFind(t *testing.T) {
 	utils.InitMySQL()
-	ub, isExist := models.FindUserByPhone("18927841103")
+	ub, isExist := models.FindUserByPhone(utils.DB, "18927841103")
 	if isExist {
 		t.Fatal("?")
 	}
 	fmt.Println(ub)
+}
+
+func TestDigui(t *testing.T) {
+	utils.InitMySQL()
+	var ur []models.UserRepository
+	res := utils.DB.Raw(`with RECURSIVE temp as
+(
+    select * from user_repository where file_name="/"
+    union all
+    select ur.* from user_repository as ur,temp t where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at is NULL
+)
+select temp.parent_id, temp.user_file_id, temp.is_dir, temp.file_name from temp;`).Find(&ur)
+	if res.Error != nil {
+		t.Fatal(res.Error)
+		return
+	}
+	fmt.Println(res.RowsAffected, len(ur))
+
 }

@@ -14,6 +14,7 @@ func main() {
 	r := router.Router()
 	f, _ := os.Create("logger.txt")
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
+
 	err := r.Run(":8080")
 	if err != nil {
 		panic("system run on 8080 failed")

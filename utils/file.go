@@ -24,7 +24,7 @@ const (
 	OTHER
 )
 
-var FileTypeId = map[string]int{
+var FileTypeId = map[string]uint8{
 	"bmp":      IMAGE,
 	"jpg":      IMAGE,
 	"png":      IMAGE,
@@ -183,9 +183,9 @@ func GetOfficeDocumentType(extendName string) (string, bool) {
 	return "", false
 }
 
-func IsChunkExist(filename string, currentChunkSize int64) bool {
+func IsChunkExist(filename string, currentChunkSize uint) bool {
 	fileInfo, err := os.Stat(filename)
-	return !os.IsNotExist(err) && fileInfo.Size() == currentChunkSize
+	return !os.IsNotExist(err) && uint(fileInfo.Size()) == currentChunkSize
 }
 
 //func DeleteAllChunks(chuckName string, totalChunks int) {
@@ -200,7 +200,7 @@ func IsChunkExist(filename string, currentChunkSize int64) bool {
 //	}
 //}
 
-func MergeChunksToFile(chuckName, fileName string, totalChunks int) error {
+func MergeChunksToFile(chuckName, fileName string, totalChunks uint) error {
 	// 创建一个用于存放大文件的新文件
 	completeFile, err := os.OpenFile("./repository/upload_file/"+fileName, os.O_CREATE|os.O_RDWR, 0777)
 	defer completeFile.Close()
@@ -211,9 +211,9 @@ func MergeChunksToFile(chuckName, fileName string, totalChunks int) error {
 	var fileEnd int64
 	// 循环所有的chunk
 	//fmt.Fprint(gin.DefaultWriter, "totalChunks", totalChunks) // 打印一下
-	for i := 1; i <= totalChunks; i++ {
+	for i := uint(1); i <= totalChunks; i++ {
 		// 获取分片文件大小
-		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
+		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.FormatInt(int64(i), 10) + ".chunk"
 		fileInfo, err := os.Stat(chunkFilePath)
 		if err != nil {
 			return err
@@ -226,17 +226,27 @@ func MergeChunksToFile(chuckName, fileName string, totalChunks int) error {
 			return err
 		}
 		// 读取分片文件
-		chunkFile.Read(b)
+		_, err = chunkFile.Read(b)
+		if err != nil {
+			return err
+		}
 		// 往大文件尾部填充分片
-		completeFile.Seek(fileEnd, 0)
-		completeFile.Write(b)
+		_, err = completeFile.Seek(fileEnd, 0)
+		if err != nil {
+			return err
+		}
+		_, err = completeFile.Write(b)
+		if err != nil {
+			return err
+		}
 		// 可以直接关闭分片
-		chunkFile.Close()
+		err = chunkFile.Close()
+		if err != nil {
+			return err
+		}
 		// 更新大文件尾部指针
 		fileEnd += fileInfo.Size()
 	}
-	// 计算文件md5值，如果直接将此处拼接的文件计算md5，似乎并不正确，todo:调查原因
-	//fileMD5, err := GetFileMd5(completeFile)
 	return nil
 }
 

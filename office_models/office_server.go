@@ -1,4 +1,4 @@
-package officemodels
+package office_models
 
 type Info struct {
 	Owner  string `json:"owner"`  // "Me"即可

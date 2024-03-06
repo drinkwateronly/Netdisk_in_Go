@@ -15,6 +15,44 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/filetransfer/downloadfile": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "单个文件下载接口",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户文件标识符",
+                        "name": "userFileId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cookie",
+                        "name": "cookie",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "参数出错",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/filetransfer/getstorage": {
             "get": {
                 "produces": [
@@ -34,6 +72,93 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        },
+        "/filetransfer/uploadfile": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "文件上传",
+                "parameters": [
+                    {
+                        "description": "文件上传请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ApiModels.FileUploadApiReq"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cookie",
+                        "name": "cookie",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "存储容量",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "参数出错",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "ApiModels.FileUploadApiReq": {
+            "type": "object",
+            "properties": {
+                "chunkNumber": {
+                    "description": "分片号",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "currentChunkSize": {
+                    "description": "分片尺寸",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "filePath": {
+                    "description": "文件存储路径",
+                    "type": "string"
+                },
+                "filename": {
+                    "description": "文件全名（文件名+拓展名）",
+                    "type": "string"
+                },
+                "identifier": {
+                    "description": "文件哈希",
+                    "type": "string"
+                },
+                "isDir": {
+                    "description": "文件夹，0则不是文件夹，1是文件夹。",
+                    "type": "integer"
+                },
+                "relativePath": {
+                    "description": "文件存储的相对路径",
+                    "type": "string"
+                },
+                "totalChunks": {
+                    "description": "分片数量",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "totalSize": {
+                    "description": "文件总大小",
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         }

@@ -1,6 +1,66 @@
+definitions:
+  ApiModels.FileUploadApiReq:
+    properties:
+      chunkNumber:
+        description: 分片号
+        minimum: 0
+        type: integer
+      currentChunkSize:
+        description: 分片尺寸
+        minimum: 0
+        type: integer
+      filePath:
+        description: 文件存储路径
+        type: string
+      filename:
+        description: 文件全名（文件名+拓展名）
+        type: string
+      identifier:
+        description: 文件哈希
+        type: string
+      isDir:
+        description: 文件夹，0则不是文件夹，1是文件夹。
+        type: integer
+      relativePath:
+        description: 文件存储的相对路径
+        type: string
+      totalChunks:
+        description: 分片数量
+        minimum: 0
+        type: integer
+      totalSize:
+        description: 文件总大小
+        minimum: 0
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
+  /filetransfer/downloadfile:
+    get:
+      parameters:
+      - description: 用户文件标识符
+        in: query
+        name: userFileId
+        required: true
+        type: string
+      - description: Cookie
+        in: query
+        name: cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务器响应成功，根据响应code判断是否成功
+          schema:
+            type: string
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 单个文件下载接口
   /filetransfer/getstorage:
     get:
       produces:
@@ -15,4 +75,30 @@ paths:
           schema:
             type: string
       summary: 获取用户存储容量
+  /filetransfer/uploadfile:
+    post:
+      parameters:
+      - description: 文件上传请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/ApiModels.FileUploadApiReq'
+      - description: Cookie
+        in: query
+        name: cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 存储容量
+          schema:
+            type: string
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 文件上传
 swagger: "2.0"
