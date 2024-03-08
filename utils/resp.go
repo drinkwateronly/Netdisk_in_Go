@@ -2,27 +2,19 @@ package utils
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"net/http"
+	"netdisk_in_go/api_models"
 )
-
-type H struct {
-	Code    int         `json:"code"`
-	Success bool        `json:"success"`
-	Msg     string      `json:"message"`
-	Data    interface{} `json:"data"`
-}
 
 func RespOK(w http.ResponseWriter, code int, success bool, data interface{}, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	h := H{
+	ret, _ := json.Marshal(api_models.RespData{
 		Code:    code,
 		Success: success,
 		Data:    data,
-		Msg:     msg,
-	}
-	ret, _ := json.Marshal(h)
+		Message: msg,
+	})
 	_, err := w.Write(ret)
 	if err != nil {
 		panic(err)
@@ -32,13 +24,12 @@ func RespOK(w http.ResponseWriter, code int, success bool, data interface{}, msg
 func RespBadReq(w http.ResponseWriter, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
-	h := H{
-		Code:    999999,
+	ret, _ := json.Marshal(api_models.RespData{
+		Code:    99999,
 		Success: false,
 		Data:    nil,
-		Msg:     msg,
-	}
-	ret, _ := json.Marshal(h)
+		Message: msg,
+	})
 	_, err := w.Write(ret)
 	if err != nil {
 		panic(err)
@@ -48,14 +39,25 @@ func RespBadReq(w http.ResponseWriter, msg string) {
 func RespOkWithDataList(w http.ResponseWriter, code int, dataList interface{}, total int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	h := gin.H{
-		"code":     code,
-		"success":  true,
-		"dataList": dataList,
-		"total":    total,
-		"message":  msg,
+	var ret []byte
+	if total == 0 {
+		// 此时切片为空，前端返回时只会收到nil，导致无法对nil遍历，因此需要返回一个数组
+		ret, _ = json.Marshal(api_models.RespDataList{
+			Code:     code,
+			Success:  true,
+			DataList: [0]interface{}{},
+			Total:    total,
+			Message:  msg,
+		})
+	} else {
+		ret, _ = json.Marshal(api_models.RespDataList{
+			Code:     code,
+			Success:  true,
+			DataList: dataList,
+			Total:    total,
+			Message:  msg,
+		})
 	}
-	ret, _ := json.Marshal(h)
 	_, err := w.Write(ret)
 	if err != nil {
 		panic(err)

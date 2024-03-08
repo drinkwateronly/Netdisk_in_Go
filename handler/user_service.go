@@ -4,16 +4,27 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	ApiModels "netdisk_in_go/APImodels"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 )
 
-// UserRegister 用户注册
+// https://www.jb51.net/article/259993.htm
+
+// UserRegister
+// @Summary 用户注册
+// @Accept json
+// @Produce json
+// @Param telephone body string true "用户电话"
+// @Param username body string true "用户名"
+// @Param password body string true "密码"
+// @Success 200 {object} api_models.RespData{} ""
+// @Failure 400 {object} string "参数出错"
+// @Router /user/register [POST]
 func UserRegister(c *gin.Context) {
 	writer := c.Writer
-	var req ApiModels.UserRegisterApi
-	err := c.ShouldBind(&req)
+	var req ApiModels.UserRegisterReqAPI
+	err := c.ShouldBind(&req) // Form表单
 	if err != nil {
 		utils.RespBadReq(writer, "参数不正确")
 		return
@@ -37,7 +48,7 @@ func UserRegister(c *gin.Context) {
 			StorageSize:      0,
 		}
 		if err := tx.Create(&ub).Error; err != nil {
-			return errors.New("注册失败，请联系管理员")
+			return err
 		}
 		ur := models.UserRepository{
 			UserFileId: utils.GenerateUUID(),
@@ -47,42 +58,65 @@ func UserRegister(c *gin.Context) {
 			IsDir:      1,
 		}
 		if err := tx.Create(&ur).Error; err != nil {
-			return errors.New("注册失败，请联系管理员")
+			return err
 		}
-		utils.RespOK(writer, 0, true, nil, "注册成功")
 		return nil
 	})
 	if err != nil {
-		utils.RespBadReq(writer, err.Error())
+		utils.RespOK(writer, 99999, false, nil, err.Error())
+		return
 	}
+	utils.RespOK(writer, 0, true, nil, "注册成功")
+	return
 }
 
-// UserLogin 用户登录
+// UserLogin
+// @Summary 用户登录，并返回cookie。
+// @Accept json
+// @Produce json
+// @Param telephone query string true "用户电话"
+// @Param password query string true "密码"
+// @Success 200 {object} api_models.RespData{data=api_models.UserLoginRespAPI} "cookie"
+// @Failure 400 {object} string "参数出错"
+// @Router /user/login [GET]
 func UserLogin(c *gin.Context) {
 	writer := c.Writer
-	phone := c.Query("telephone")
-	rawPassword := c.Query("password")
+	// 解析请求的query参数
+	var req ApiModels.UserLoginReqAPI
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		utils.RespBadReq(writer, "参数错误")
+		return
+	}
+
 	// 查询用户是否存在
-	ub, isExist := models.FindUserByPhone(utils.DB, phone)
+	ub, isExist := models.FindUserByPhone(utils.DB, req.Telephone)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return
 	}
 	// 校验密码
-	isPass := utils.ValidatePassword(rawPassword, ub.Salt, ub.Password)
+	isPass := utils.ValidatePassword(req.Password, ub.Salt, ub.Password)
 	if !isPass {
 		utils.RespBadReq(writer, "密码错误")
 		return
 	}
 	// 生成token
-	token, err := utils.GenerateToken(ub.Username, phone, ub.UserId, 360000)
+	token, err := utils.GenerateToken(ub.Username, req.Telephone, ub.UserId, utils.Config.CookieExpireTime)
 	if err != nil {
 		utils.RespBadReq(writer, "登陆失败，请联系管理员")
+		return
 	}
-	utils.RespOK(writer, 0, true, gin.H{"token": token}, "登陆成功")
+	utils.RespOK(writer, 0, true, ApiModels.UserLoginRespAPI{Token: token}, "登陆成功")
 }
 
-// CheckLogin 检查用户是否登录
+// CheckLogin
+// @Summary 检查用户是否登录，并返回用户名，用户id。
+// @Accept json
+// @Produce json
+// @Success 200 {object} api_models.RespData{data=api_models.UserCheckLoginRespAPI} "cookie"
+// @Failure 400 {object} string "参数出错"
+// @Router /user/checkuserlogininfo [GET]
 func CheckLogin(c *gin.Context) {
 	writer := c.Writer
 	uc, err := utils.ParseCookieFromRequest(c)
@@ -90,8 +124,8 @@ func CheckLogin(c *gin.Context) {
 		utils.RespOK(writer, 999999, false, nil, "未登录")
 		return
 	}
-	utils.RespOK(writer, 0, true, gin.H{
-		"userId":   uc.UserId,
-		"username": uc.Username,
-	}, "成功") // todo:用户信息存于data中
+	utils.RespOK(writer, 0, true, ApiModels.UserCheckLoginRespAPI{
+		UserId:   uc.UserId,
+		UserName: uc.Username,
+	}, "成功")
 }

@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"gopkg.in/yaml.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -11,6 +13,7 @@ import (
 
 var DB *gorm.DB
 var MyLog *log.Logger
+var Config ConfigModel
 
 func InitLogger() {
 	file, _ := os.Create("logger.txt")
@@ -18,7 +21,6 @@ func InitLogger() {
 }
 
 func InitMySQL() {
-
 	// 自定义SQL语句日志
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
@@ -38,4 +40,21 @@ func InitMySQL() {
 	if err != nil {
 		panic("failed to connect mysql")
 	}
+}
+
+func InitConfig() error {
+	f, err := os.Open("config.yaml")
+	if err != nil {
+		return err
+	}
+	var data []byte
+	data, err = io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(data, &Config)
+	if err != nil {
+		return err
+	}
+	return nil
 }

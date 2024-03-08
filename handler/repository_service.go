@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm/clause"
 	"io"
 	"net/http"
-	ApiModels "netdisk_in_go/APImodels"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 	"os"
@@ -25,7 +25,7 @@ func FileUploadPrepare(c *gin.Context) {
 		return
 	}
 	// 绑定query请求参数
-	var req ApiModels.FileUploadApiReq
+	var req ApiModels.FileUploadReqAPI
 	err = c.ShouldBindQuery(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "请求参数出错")
@@ -38,7 +38,7 @@ func FileUploadPrepare(c *gin.Context) {
 	// 开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
 		// 获取用户信息
-		ub, isExist := models.FindUserByIdentity(tx, uc.UserId)
+		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
 		if !isExist {
 			return errors.New("用户不存在")
 		}
@@ -54,13 +54,15 @@ func FileUploadPrepare(c *gin.Context) {
 		}
 
 		// 判断文件在当前文件夹是否重名
-		if _, isExist := models.FindFileByNameAndPath(tx, ub.UserId,
+		if _, isExist, err = models.FindFileByNameAndPath(tx, ub.UserId,
 			processedFileInfo.AbsPath,
 			processedFileInfo.FileName,
 			processedFileInfo.ExtendName); isExist {
 			return errors.New("文件在当前文件夹已存在")
 		}
-
+		if err != nil {
+			return errors.New("文件夹不存在")
+		}
 		// 如果文件大小为0，则上传文件
 		if req.TotalSize == 0 {
 			utils.RespOK(writer, 0, true, gin.H{"skipUpload": false}, "开始上传文件")
@@ -180,7 +182,7 @@ func FileUploadPrepare(c *gin.Context) {
 // FileUpload
 // @Summary 文件上传
 // @Produce json
-// @Param req body ApiModels.FileUploadApiReq true "文件上传请求"
+// @Param req body ApiModels.FileUploadReqAPI true "文件上传请求"
 // @Param cookie query string true "Cookie"
 // @Success 200 {object} string "存储容量"
 // @Failure 400 {object} string "参数出错"
@@ -201,7 +203,7 @@ func FileUpload(c *gin.Context) {
 	}
 
 	// 绑定请求参数
-	var req ApiModels.FileUploadApiReq
+	var req ApiModels.FileUploadReqAPI
 	err = c.ShouldBind(&req)
 	if err != nil {
 		utils.RespOK(writer, 999999, false, nil, "参数出错")
@@ -231,11 +233,12 @@ func FileUpload(c *gin.Context) {
 	// #############走到这里意味着最后一块分块上传完成，开始合并文件#############
 	// 处理出文件名、拓展名、文件的逻辑绝对路径、文件类型
 	processedFileInfo := utils.GetFileInfoFromReq(req)
+	fmt.Printf("%q", processedFileInfo)
 
 	// 所有文件分片上传完成，并得到了文件信息，开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
 		// 获取用户信息
-		ub, isExist := models.FindUserByIdentity(tx, uc.UserId)
+		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
 		if !isExist {
 			utils.RespBadReq(writer, "用户不存在")
 		}
@@ -247,15 +250,18 @@ func FileUpload(c *gin.Context) {
 		//}
 
 		// 判断文件在当前文件夹是否重名
-		if _, isExist := models.FindFileByNameAndPath(tx, ub.UserId,
+		if _, isExist, err = models.FindFileByNameAndPath(tx, ub.UserId,
 			processedFileInfo.AbsPath,
 			processedFileInfo.FileName,
 			processedFileInfo.ExtendName); isExist {
 			return errors.New("文件在当前文件夹已存在")
 		}
-
+		if err != nil {
+			return errors.New("文件夹不存在")
+		}
 		// 根据绝对路径 判断文件的父文件夹是否存在
 		fmt.Println("processedFileInfo.AbsPath", processedFileInfo.AbsPath)
+
 		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, processedFileInfo.AbsPath)
 		if err != nil {
 			return err
@@ -400,7 +406,16 @@ func FileUpload(c *gin.Context) {
 	//utils.DeleteAllChunks(fileMD5, totalChunks)
 }
 
-// CreateFile 创建文件
+// CreateFile
+// @Summary 文件创建，仅支持excel，word，ppt的创建
+// @Accept json
+// @Produce json
+// @Param req body api_models.CreateFileReqAPI true "请求"
+// @Param username body string true "用户名"
+// @Param password body string true "密码"
+// @Success 200 {object} api_models.RespData{} ""
+// @Failure 400 {object} string "参数出错"
+// @Router /createFile [POST]
 func CreateFile(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
@@ -409,24 +424,29 @@ func CreateFile(c *gin.Context) {
 		utils.RespOK(writer, ApiModels.UNAUTHORIZED, false, nil, "cookie校验失败")
 		return
 	}
-	// 获取参数
-	var r ApiModels.CreateFileRequest
-	err := c.ShouldBind(&r)
+	// 获取用户信息
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
+	if !isExist {
+		utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
+		return
+	}
+	// 绑定请求参数
+	var req ApiModels.CreateFileReqAPI
+	err = c.ShouldBindJSON(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
+	// 仅支持excel，word，ppt的创建
+	if req.ExtendName != "xlsx" && req.ExtendName != "docx" && req.ExtendName != "pptx" {
+		utils.RespOK(writer, ApiModels.FILETYPENOTSUPPORT, false, nil, "文件类型不支持")
+		return
+	}
 	// 开启事务
+	// todo:思考，事务A和B都进行在同一个路径创建同名文件，且在事务开启时都没找到同名文件，此时两个事务执行后是否会创建两个相同记录？
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取用户信息
-		ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
-		if !isExist {
-			utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
-			return errors.New("user not exist")
-		}
-
-		// 查询父文件夹
-		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, r.FilePath)
+		// 查询父文件夹记录
+		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, req.FilePath)
 		if err != nil {
 			utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, "创建文件夹失败")
 			return errors.New("database error" + err.Error())
@@ -437,7 +457,12 @@ func CreateFile(c *gin.Context) {
 		}
 
 		// 检查是否有重名文件
-		if _, isExist := models.FindFileByNameAndPath(utils.DB, ub.UserId, r.FilePath, r.FileName, r.ExtendName); isExist {
+		_, isExist, err = models.FindFileByNameAndPath(tx, ub.UserId, req.FilePath, req.FileName, req.ExtendName)
+		if err != nil {
+			utils.RespOK(writer, ApiModels.FILEREPEAT, false, nil, "文件在当前文件夹已存在")
+			return errors.New("file repeat")
+		}
+		if isExist {
 			utils.RespOK(writer, ApiModels.FILEREPEAT, false, nil, "文件在当前文件夹已存在")
 			return errors.New("file repeat")
 		}
@@ -461,11 +486,11 @@ func CreateFile(c *gin.Context) {
 			UserId:     ub.UserId,
 			FileId:     poolFileUUID,
 			ParentId:   parentDir.UserFileId,
-			FilePath:   r.FilePath,
-			FileName:   r.FileName,
-			FileType:   2,
+			FilePath:   req.FilePath,
+			FileName:   req.FileName,
+			FileType:   2, // 仅支持三种文件格式，因此类型是
 			IsDir:      0,
-			ExtendName: r.ExtendName,
+			ExtendName: req.ExtendName,
 			ModifyTime: time.Now().Format("2006-01-02 15:04:05"),
 			UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
 			FileSize:   0,
@@ -479,11 +504,6 @@ func CreateFile(c *gin.Context) {
 			Path:   savePath,
 		}).Error; err != nil {
 			return err
-		}
-
-		if err != nil {
-			utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, "文件保存出错")
-			return errors.New("database error")
 		}
 		utils.RespOK(writer, 0, true, nil, "创建文件成功")
 		return nil
@@ -506,14 +526,15 @@ func CreateFolder(c *gin.Context) {
 		utils.RespBadReq(writer, "出现错误")
 		return
 	}
+	// 开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
 		// 获取用户信息
-		ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
 		if !isExist {
 			utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
 			return errors.New("user not exist")
 		}
-		// 查询父文件夹
+		// 查询父文件夹记录
 		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, r.FolderPath)
 		if err != nil {
 			utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, "创建文件夹失败")
@@ -523,19 +544,23 @@ func CreateFolder(c *gin.Context) {
 			utils.RespOK(writer, ApiModels.PARENTNOTEXIST, false, nil, "无法找到父文件夹")
 			return errors.New("parent directory not exist")
 		}
-		// 查询父文件夹下同名文件夹
-		res := tx.Where("user_id = ? AND file_name = ? AND file_path = ? AND file_type = ?", ub.UserId, r.FolderName, r.FolderPath, utils.DIRECTORY).
-			Find(&models.UserRepository{})
-		if res.Error != nil {
-			return res.Error
-		}
-		// 文件存在
-		if res.RowsAffected != 0 {
-			utils.RespOK(writer, ApiModels.FILEREPEAT, false, nil, "同名文件夹已存在")
-			return errors.New("file repeat")
-		}
-		// 文件不存在，新增文件记录
-		err = utils.DB.Create(&models.UserRepository{
+		// 不需要查询文件是否存在，因为user_repository表中将(`user_id`,`parent_id`,`file_name`,`extend_name`,`file_type`)作为唯一索引
+		// 因此，文件是否重复交由数据库是否返回错误代码是否为1062进行判断
+		/*
+			// 查询父文件夹下同名文件夹
+			res := tx.Where("user_id = ? AND file_name = ? AND file_path = ? AND file_type = ?", ub.UserId, r.FolderName, r.FolderPath, utils.DIRECTORY).
+				Find(&models.UserRepository{})
+			if res.Error != nil {
+				return res.Error
+			}
+			// 文件存在
+			if res.RowsAffected != 0 {
+				utils.RespOK(writer, ApiModels.FILEREPEAT, false, nil, "同名文件夹已存在")
+				return errors.New("file repeat")
+			}
+		*/
+		// 新增文件记录
+		err = tx.Create(&models.UserRepository{
 			UserFileId: utils.GenerateUUID(),
 			UserId:     ub.UserId,
 			FilePath:   r.FolderPath,
@@ -548,8 +573,12 @@ func CreateFolder(c *gin.Context) {
 			UploadTime: time.Now().Format("2006-01-02 15:04:05"), // 上传时间
 		}).Error
 		if err != nil {
+			if utils.IsDuplicateEntryErr(err) {
+				utils.RespOK(writer, ApiModels.FILEREPEAT, false, nil, "文件夹已存在")
+				return err
+			}
 			utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, "创建文件夹失败")
-			return errors.New("data base error" + err.Error())
+			return err
 		}
 		utils.RespOK(writer, ApiModels.SUCCESS, true, nil, "创建文件夹成功")
 		return nil
@@ -621,7 +650,7 @@ func DeleteFilesInBatch(c *gin.Context) {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 	}
@@ -631,7 +660,7 @@ func DeleteFilesInBatch(c *gin.Context) {
 	}
 
 	var r DeleteFilesRequest
-	err := c.ShouldBind(&r)
+	err = c.ShouldBind(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -697,7 +726,7 @@ func FilePreview(c *gin.Context) {
 		return
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return

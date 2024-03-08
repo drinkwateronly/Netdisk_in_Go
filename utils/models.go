@@ -1,7 +1,7 @@
 package utils
 
 import (
-	ApiModels "netdisk_in_go/APImodels"
+	ApiModels "netdisk_in_go/api_models"
 	"strings"
 )
 
@@ -14,17 +14,20 @@ type ProcessedFileInfo struct {
 	FileType   uint8
 }
 
-func GetFileInfoFromReq(req ApiModels.FileUploadApiReq) ProcessedFileInfo {
+// GetFileInfoFromReq 从文件上传请求参数ApiModels.FileUploadReqAPI中处理出用于文件上传的必须参数，以ProcessedFileInfo保存
+func GetFileInfoFromReq(req ApiModels.FileUploadReqAPI) ProcessedFileInfo {
 	var fileInfo ProcessedFileInfo
 
+	// 文件名与文件拓展名
 	split := strings.Split(req.FileFullName, ".")
-	if len(split) == 0 { // 没有文件拓展名
-		//extendName = ""
+	if len(split) == 1 { // 没有文件拓展名
+		fileInfo.ExtendName = ""
 		fileInfo.FileName = req.FileFullName
 	} else {
 		fileInfo.ExtendName = split[len(split)-1]
-		fileInfo.FileName = strings.TrimSuffix(req.FileFullName, "."+fileInfo.ExtendName) // 去掉文件全名右侧的拓展名
+		fileInfo.FileName = req.FileFullName[0 : len(req.FileFullName)-len(fileInfo.ExtendName)-1] // 去掉文件全名右侧的拓展名
 	}
+
 	// 文件拓展名映射为文件类型
 	fileInfo.FileType = FileTypeId[fileInfo.ExtendName]
 	if req.IsDir == 1 {
@@ -33,15 +36,15 @@ func GetFileInfoFromReq(req ApiModels.FileUploadApiReq) ProcessedFileInfo {
 		fileInfo.FileType = 5 // 其他
 	}
 
-	//
+	// 包括文件名的完整路径fileFullPath
 	var fileFullPath string
 	if req.FilePath == "/" {
 		fileFullPath = "/" + req.RelativePath
 	} else {
 		fileFullPath = req.FilePath + "/" + req.RelativePath
 	}
-	if len(fileFullPath)-len(req.FileFullName) <= 0 {
-		fileInfo.AbsPath = fileFullPath[:len(fileFullPath)-len(req.FileFullName)] // 不去掉最后的"/"
+	if len(fileFullPath) == len(req.FileFullName)+1 { // 即多出了一个/
+		fileInfo.AbsPath = "/" // 不去掉最后的"/"
 	} else {
 		fileInfo.AbsPath = fileFullPath[:len(fileFullPath)-len(req.FileFullName)-1] // 去掉最后的"/"
 	}

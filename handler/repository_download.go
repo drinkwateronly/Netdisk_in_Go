@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
-	ApiModels "netdisk_in_go/APImodels"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 	"os"
@@ -27,7 +27,7 @@ func FileDownload(c *gin.Context) {
 		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 	}
@@ -115,7 +115,7 @@ func FileDownloadInBatch(c *gin.Context) {
 		return
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return

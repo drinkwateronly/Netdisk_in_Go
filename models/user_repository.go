@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/middle_models"
 	"netdisk_in_go/utils"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-// 用户存储池
+// UserRepository 用户存储池
 type UserRepository struct {
 	UserFileId    string `json:"userFileId"`
 	FileId        string `json:"fileId"`
@@ -30,32 +31,24 @@ type UserRepository struct {
 	gorm.Model
 }
 
-type FileTreeNode struct {
-	UserFileId string          `json:"id"`
-	DirName    string          `json:"label"`
-	FilePath   string          `json:"filePath"`
-	Depth      int             `json:"depth"`
-	State      string          `json:"state"`
-	IsLeaf     interface{}     `json:"isLeaf"`
-	IconClass  string          `json:"iconClass"`
-	Children   []*FileTreeNode `json:"children"`
-}
-
 func (table UserRepository) TableName() string {
 	return "user_repository"
 }
 
-// FindFilesByPathAndPage 根据文件地址，分页查询多个文件
-func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([]UserRepository, int, error) {
-	var files []UserRepository
-	// 分页查询
-	offset := count * (currentPage - 1)
-	err := utils.DB.Where("user_id = ? and file_path = ?", userId, filePath).Find(&files).Error
+// FindFilesByPathAndPage
+// 根据文件夹地址filePath、当前页currentPage（从0开始）、每页记录数量count、
+// 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
+func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([]ApiModels.UserFileListRespAPI, int, error) {
+	var files []ApiModels.UserFileListRespAPI
+	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
+	err := utils.DB.Model(&UserRepository{}).Where("user_id = ? and file_path = ?", userId, filePath).Scan(&files).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	// 应对最后一页时，实际记录数少于count的情况。
+	// 从所有符合条件的文件记录的offset处获取count条
+	offset := count * (currentPage - 1)
 	if offset+count+1 > uint(len(files)) {
+		// offset处获取count条大于文件总数量（例如最后一页的记录少于count条）
 		return files[offset:], len(files), err
 	} else {
 		return files[offset : offset+count], len(files), err
@@ -63,16 +56,19 @@ func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([
 }
 
 // FindFilesByTypeAndPage
-// 根据当前页currentPage和每页记录count，返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count uint) ([]UserRepository, int, error) {
-	var files []UserRepository
-	// 分页查询
-	offset := count * (currentPage - 1)
+// 根据文件夹类型fileType、当前页currentPage（从0开始）、每页记录数量count、
+// 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
+func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count uint) ([]ApiModels.UserFileListRespAPI, int, error) {
+	var files []ApiModels.UserFileListRespAPI
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
-	// 获取用户对应类型的所有文件
-	err := utils.DB.Where("user_id = ? and file_type = ?", userId, fileType).Find(&files).Error
-	// 如果实际记录数少于count（例如最后一页）
-	if offset+count >= uint(len(files)) {
+	err := utils.DB.Model(&UserRepository{}).Where("user_id = ? and file_type = ?", userId, fileType).Scan(&files).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	// 从所有符合条件的文件记录的offset处获取count条
+	offset := count * (currentPage - 1)
+	if offset+count+1 > uint(len(files)) {
+		// offset处获取count条大于文件总数量（例如最后一页的记录少于count条）
 		return files[offset:], len(files), err
 	} else {
 		return files[offset : offset+count], len(files), err
@@ -80,17 +76,15 @@ func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count ui
 }
 
 // FindFileByNameAndPath 根据文件地址文件名，查询文件是否存在
-func FindFileByNameAndPath(db *gorm.DB, userId, filePath, fileName, extendName string) (*UserRepository, bool) {
+func FindFileByNameAndPath(db *gorm.DB, userId, filePath, fileName, extendName string) (*UserRepository, bool, error) {
 	var ur UserRepository
-	rowsAffected := db.
-		Where("user_id = ? and file_path = ? and file_name = ? and extend_name = ? and is_dir = 0", userId, filePath, fileName, extendName).
-		Find(&ur).RowsAffected
-	if rowsAffected == 0 { // 文件不存在
-		return nil, false
+	res := db.Where("user_id = ? and file_path = ? and file_name = ? and extend_name = ? and is_dir = 0", userId, filePath, fileName, extendName).
+		Find(&ur)
+	if res.RowsAffected == 0 { // 文件不存在
+		return nil, false, nil
 	}
 	// 文件存在或者出错
-	return &ur, true
-
+	return &ur, true, nil
 }
 
 func FindUserFileById(userId, userFileId string) (*UserRepository, bool) {
@@ -188,7 +182,7 @@ func DelAllFilesFromDir(delBatchId, userId, parentPath, dirName string) error {
 	return nil
 }
 
-func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName string) (*FileTreeNode, error) {
+func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName string) (*ApiModels.UserFileTreeNode, error) {
 	var directoryPath string // 文件夹路径
 	// todo: 递归sql
 	// 拼接出这个文件夹的路径
@@ -200,7 +194,7 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 		directoryPath = parentPath + "/" + dirName
 	}
 	// 找到这个文件夹下的所有子文件夹，加排他锁
-	node := FileTreeNode{
+	node := ApiModels.UserFileTreeNode{
 		UserFileId: userFileId,
 		DirName:    dirName,
 		FilePath:   directoryPath,
@@ -215,7 +209,7 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 		return nil, err
 	}
 
-	children := make([]*FileTreeNode, len(files))
+	children := make([]*ApiModels.UserFileTreeNode, len(files))
 	// 遍历所有子文件夹
 	for i, file := range files {
 		// 如果该文件是子文件夹，则进入该子文件夹删除文件
@@ -229,12 +223,24 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 	return &node, nil
 }
 
-// BuildFileTreeFromDIr 输入文件夹记录切片，使用层序遍历建立文件树，并返回根节点
-// 此处的切片和二叉树层序遍历的切片一致 todo:有效性存疑
-func BuildFileTreeFromDIr(dirs []UserRepository) *FileTreeNode {
-	// 根据层序遍历构建二叉树
-	// 用户一定有个根目录
-	root := FileTreeNode{
+// BuildFileTree 输入用户id，根据广度优先结果建立文件树，并返回根节点
+func BuildFileTree(userId string) (*ApiModels.UserFileTreeNode, error) {
+	// 存放查询结果
+	var dirs []UserRepository
+	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
+	res := utils.DB.Raw(`with RECURSIVE temp as
+(
+    SELECT * from user_repository where file_name="/" AND user_id = ?
+    UNION ALL
+    SELECT ur.* from user_repository as ur,temp t 
+	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at is NULL
+)
+select * from temp;`, userId).Find(&dirs)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	// 递归mysql查询结果与广度优先遍历一致，因此根据广度优先结果构建二叉树
+	root := ApiModels.UserFileTreeNode{
 		UserFileId: dirs[0].UserFileId,
 		DirName:    dirs[0].FileName,
 		FilePath:   dirs[0].FilePath,
@@ -242,16 +248,20 @@ func BuildFileTreeFromDIr(dirs []UserRepository) *FileTreeNode {
 		State:      "closed",
 		IsLeaf:     nil,
 	}
-	queue := make([]*FileTreeNode, 1)
+	// 建队，根节点入队
+	queue := make([]*ApiModels.UserFileTreeNode, 1)
 	queue[0] = &root
+	// 设置为当前节点，创建孩子节点空列表
 	curNode := &root
-	children := make([]*FileTreeNode, 0)
-	dirLen := len(dirs)
+	children := make([]*ApiModels.UserFileTreeNode, 0)
+	// 存放节点文件路径
 	var filePath string
-	// 遍历一遍所有节点
+
+	// 遍历一遍查询结果dirs
+	dirLen := len(dirs)
 	for i := 1; i < dirLen; {
-		// 当前队头作为根，找到以当前节点为父节点的节点
-		if queue[0].UserFileId == dirs[i].ParentId {
+		// 找到以当前节点为父节点的节点
+		if curNode.UserFileId == dirs[i].ParentId {
 			// 拼接文件路径
 			if dirs[i].FilePath == "/" {
 				filePath = "/" + dirs[i].FileName
@@ -259,7 +269,7 @@ func BuildFileTreeFromDIr(dirs []UserRepository) *FileTreeNode {
 				filePath = dirs[i].FilePath + "/" + dirs[i].FileName
 			}
 			// 孩子节点
-			child := FileTreeNode{
+			child := ApiModels.UserFileTreeNode{
 				UserFileId: dirs[i].UserFileId,
 				DirName:    dirs[i].FileName,
 				FilePath:   filePath,
@@ -269,20 +279,23 @@ func BuildFileTreeFromDIr(dirs []UserRepository) *FileTreeNode {
 			}
 			// 当前根节点的子树
 			children = append(children, &child)
+			// 孩子节点入队
 			queue = append(queue, &child)
+			// 当且仅当找到了孩子，指针才移动
 			i++
 		} else {
-			// 找完了当前根的所有孩子
-			// 完成链接
+			// 找完了当前节点的所有孩子
 			curNode.Children = children
-			// 当前根出队
+			// 当前节点（队头）出队
 			queue = queue[1:]
+			// 下一个节点
 			curNode = queue[0]
-			children = make([]*FileTreeNode, 0)
+			// 重置孩子节点切片
+			children = make([]*ApiModels.UserFileTreeNode, 0)
 		}
 	}
 	curNode.Children = children
-	return &root
+	return &root, nil
 }
 
 // SoftDelUserFiles 根据userId, userFileId，将单个/多个用户文件记录软删除，并为记录设置delBatchId

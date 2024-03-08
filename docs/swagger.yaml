@@ -1,5 +1,20 @@
 definitions:
-  ApiModels.FileUploadApiReq:
+  api_models.CopyrightAPI:
+    properties:
+      auditDate:
+        type: string
+      company:
+        type: string
+      domainChineseName:
+        type: string
+      licenseKey:
+        type: string
+      primaryDomainName:
+        type: string
+      project:
+        type: string
+    type: object
+  api_models.FileUploadApiReq:
     properties:
       chunkNumber:
         description: 分片号
@@ -33,13 +48,144 @@ definitions:
         minimum: 0
         type: integer
     type: object
+  api_models.RecoveryListRespAPI:
+    properties:
+      deleteBatchNum:
+        type: string
+      deleteTime:
+        type: string
+      extendName:
+        type: string
+      fileName:
+        type: string
+      filePath:
+        type: string
+      fileSize:
+        type: integer
+      fileType:
+        type: integer
+      isDir:
+        type: integer
+      uploadTime:
+        type: string
+      userFileId:
+        type: string
+      userId:
+        type: string
+    type: object
+  api_models.RespData:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    required:
+    - code
+    - data
+    - message
+    - success
+    type: object
+  api_models.RespDataList:
+    properties:
+      code:
+        type: integer
+      dataList: {}
+      message:
+        type: string
+      success:
+        type: boolean
+      total:
+        type: integer
+    required:
+    - code
+    - dataList
+    - message
+    - success
+    - total
+    type: object
+  api_models.UserCheckLoginRespAPI:
+    properties:
+      userId:
+        type: string
+      username:
+        type: string
+    type: object
+  api_models.UserLoginRespAPI:
+    properties:
+      token:
+        type: string
+    type: object
+  api_models.UserStorageReqAPI:
+    properties:
+      storageSize:
+        type: integer
+      totalStorageSize:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
+  /file/getfilelist:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: currentPage
+        type: integer
+      - in: query
+        name: filePath
+        type: string
+      - in: query
+        name: fileType
+        type: integer
+      - in: query
+        name: pageCount
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api_models.RespData'
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 获取用户文件列表
+  /filetransfer/batchDownloadFile:
+    get:
+      parameters:
+      - description: 多个用户文件标识符，以逗号隔开
+        in: query
+        name: userFileIds
+        required: true
+        type: string
+      - description: Cookie
+        in: query
+        name: cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务器响应成功，根据响应code判断是否成功
+          schema:
+            type: string
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 文件批量下载接口
   /filetransfer/downloadfile:
     get:
       parameters:
-      - description: 用户文件标识符
+      - description: 单个用户文件标识符
         in: query
         name: userFileId
         required: true
@@ -60,16 +206,21 @@ paths:
           description: 参数出错
           schema:
             type: string
-      summary: 单个文件下载接口
+      summary: 文件单个下载接口
   /filetransfer/getstorage:
     get:
       produces:
       - application/json
       responses:
         "200":
-          description: 存储容量
+          description: OK
           schema:
-            type: string
+            allOf:
+            - $ref: '#/definitions/api_models.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api_models.UserStorageReqAPI'
+              type: object
         "400":
           description: cookie校验失败
           schema:
@@ -83,7 +234,7 @@ paths:
         name: req
         required: true
         schema:
-          $ref: '#/definitions/ApiModels.FileUploadApiReq'
+          $ref: '#/definitions/api_models.FileUploadApiReq'
       - description: Cookie
         in: query
         name: cookie
@@ -101,4 +252,169 @@ paths:
           schema:
             type: string
       summary: 文件上传
+  /notice/list:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      summary: 获取通知列表, 暂未使用
+  /param/grouplist:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api_models.CopyrightAPI'
+      summary: 获取copyright, 暂未使用
+  /recoveryfile/deleterecoveryfile:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户文件id
+        in: body
+        name: userFileId
+        required: true
+        schema:
+          type: string
+      - description: Cookie
+        in: query
+        name: cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api_models.RespData'
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 删除多个回收站文件
+  /recoveryfile/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cookie
+        in: query
+        name: cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务器响应成功，根据响应code判断是否成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/api_models.RespDataList'
+            - properties:
+                datalist:
+                  items:
+                    $ref: '#/definitions/api_models.RecoveryListRespAPI'
+                  type: array
+              type: object
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 获取回收站文件列表
+  /user/checkuserlogininfo:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: cookie
+          schema:
+            allOf:
+            - $ref: '#/definitions/api_models.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api_models.UserCheckLoginRespAPI'
+              type: object
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 检查用户是否登录，并返回用户名，用户id。
+  /user/login:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户电话
+        in: query
+        name: telephone
+        required: true
+        type: string
+      - description: 密码
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: cookie
+          schema:
+            allOf:
+            - $ref: '#/definitions/api_models.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api_models.UserLoginRespAPI'
+              type: object
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 用户登录，并返回cookie。
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户电话
+        in: body
+        name: telephone
+        required: true
+        schema:
+          type: string
+      - description: 用户名
+        in: body
+        name: username
+        required: true
+        schema:
+          type: string
+      - description: 密码
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api_models.RespData'
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 用户注册
 swagger: "2.0"

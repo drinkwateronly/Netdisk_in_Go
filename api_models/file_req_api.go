@@ -1,13 +1,41 @@
-package ApiModels
+package api_models
 
-type UserFileListRequest struct {
+type UserFileListReqAPI struct {
 	FilePath    string `form:"filePath"`
 	FileType    uint8  `form:"fileType"`
 	CurrentPage uint   `form:"currentPage"`
 	PageCount   uint   `form:"pageCount"`
 }
 
-type CreateFileRequest struct {
+type UserFileListRespAPI struct {
+	UserFileId    string `json:"userFileId"`
+	FileId        string `json:"fileId"`
+	UserId        string `json:"userId"`
+	FilePath      string `json:"filePath"`
+	ParentId      string `json:"parentId"`
+	FileName      string `json:"fileName"`
+	ExtendName    string `json:"extendName"`
+	FileType      uint8  `json:"fileType"`
+	IsDir         uint8  `json:"isDir"`
+	FileSize      uint64 `json:"fileSize"`
+	ModifyTime    string `json:"modifyTime"`
+	UploadTime    string `json:"uploadTime"`
+	DeleteBatchId string `json:"deleteBatchNum"`
+}
+
+type UserFileTreeNode struct {
+	UserFileId string              `json:"id"`
+	DirName    string              `json:"label"`
+	FilePath   string              `json:"filePath"`
+	Depth      int                 `json:"depth"`
+	State      string              `json:"state"`
+	IsLeaf     interface{}         `json:"isLeaf"`
+	IconClass  string              `json:"iconClass"`
+	Children   []*UserFileTreeNode `json:"children"`
+}
+
+// CreateFileReqAPI 创建文件请求API
+type CreateFileReqAPI struct {
 	FileName   string `json:"fileName"`
 	FilePath   string `json:"filePath"`
 	ExtendName string `json:"extendName"`
@@ -18,10 +46,10 @@ type CreateFolderRequest struct {
 	FolderPath string `json:"filePath"`
 }
 
-// FileUploadApiReq
+// FileUploadReqAPI
 // Create or update API information request | 创建或更新API信息
-// swagger:model FileUploadApiReq
-type FileUploadApiReq struct {
+// swagger:model FileUploadReqAPI
+type FileUploadReqAPI struct {
 	// 分片号
 	ChunkNumber uint `form:"chunkNumber"  binding:"gte=0"`
 	// 分片尺寸

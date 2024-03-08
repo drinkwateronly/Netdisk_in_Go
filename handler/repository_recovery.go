@@ -3,14 +3,22 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 	"strings"
 )
 
-//  回收站文件相关
+//  回收站文件相关接口
 
-// GetRecoveryFileList 1
+// GetRecoveryFileList
+// @Summary 获取回收站文件列表
+// @Accept json
+// @Produce json
+// @Param cookie query string true "Cookie" // 并非query参数
+// @Success 200 {object} api_models.RespDataList{datalist=[]api_models.RecoveryListRespAPI} "服务器响应成功，根据响应code判断是否成功"
+// @Failure 400 {object} string "参数出错"
+// @Router /recoveryfile/list [GET]
 func GetRecoveryFileList(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie，获取用户信息
@@ -19,13 +27,24 @@ func GetRecoveryFileList(c *gin.Context) {
 		utils.RespBadReq(writer, "用户校验失败")
 		return
 	}
-	var recoveryFiles []models.RecoveryBasic
-	utils.DB.
-		Where("user_id = ?", ub.UserId).
-		Find(&recoveryFiles)
+	var recoveryFiles []ApiModels.RecoveryListRespAPI
+	res := utils.DB.Model(models.RecoveryBasic{}).Where("user_id = ?", ub.UserId).Scan(&recoveryFiles)
+	if res.Error != nil {
+		utils.RespOK(writer, 99999, false, nil, err.Error())
+		return
+	}
 	utils.RespOkWithDataList(writer, 0, recoveryFiles, len(recoveryFiles), "文件列表")
 }
 
+// DelRecoveryFile
+// @Summary 删除单个回收站文件
+// @Accept json
+// @Produce json
+// @Param userFileId body string true "用户文件id"
+// @Param cookie query string true "Cookie" // 并非query参数
+// @Success 200 {object} api_models.RespData{} ""
+// @Failure 400 {object} string "参数出错"
+// @Router /recoveryfile/deleterecoveryfile [POST]
 func DelRecoveryFile(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie，获取用户信息
@@ -34,11 +53,9 @@ func DelRecoveryFile(c *gin.Context) {
 		utils.RespBadReq(writer, "用户校验失败")
 		return
 	}
-	type DelRecoveryFileReq struct {
-		UserFileId string `json:"userFileId"`
-	}
-	var r DelRecoveryFileReq
-	err = c.ShouldBind(&r)
+	// 绑定post载荷的json格式参数
+	var r ApiModels.DelRecoveryReqAPI
+	err = c.ShouldBindJSON(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误")
 		return
@@ -51,7 +68,16 @@ func DelRecoveryFile(c *gin.Context) {
 	utils.RespOkWithDataList(writer, 0, nil, 0, "删除成功")
 }
 
-func DelRecoveryFileInBatch(c *gin.Context) {
+// DelRecoveryFilesInBatch
+// @Summary 删除多个回收站文件
+// @Accept json
+// @Produce json
+// @Param userFileId body string true "用户文件id"
+// @Param cookie query string true "Cookie" // 并非query参数
+// @Success 200 {object} api_models.RespData{} ""
+// @Failure 400 {object} string "参数出错"
+// @Router /recoveryfile/deleterecoveryfile [POST]
+func DelRecoveryFilesInBatch(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie，获取用户信息
 	ub, err := models.GetUserFromCoookie(utils.DB, c)
@@ -59,11 +85,9 @@ func DelRecoveryFileInBatch(c *gin.Context) {
 		utils.RespBadReq(writer, "用户校验失败")
 		return
 	}
-	type DelRecoveryFileReq struct {
-		UserFileIds string `json:"userFileIds"`
-	}
-	var r DelRecoveryFileReq
-	err = c.ShouldBind(&r)
+
+	var r ApiModels.DelRecoveryFilesInBatchReq
+	err = c.ShouldBindJSON(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误")
 		return

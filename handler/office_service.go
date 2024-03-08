@@ -20,14 +20,14 @@ func PreviewOfficeFile(c *gin.Context) {
 	uc, _ := utils.ParseCookie(cookie)
 
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return
 	}
 	// 处理请求参数
 	json := make(map[string]interface{})
-	err := c.ShouldBind(&json)
+	err = c.ShouldBind(&json)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -160,7 +160,7 @@ func OfficeFilePreview(c *gin.Context) {
 		return
 	}
 	// 获取用户信息
-	ub, isExist := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
 	if !isExist {
 		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "用户不存在")
 		return

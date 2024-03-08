@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	ApiModels "netdisk_in_go/APImodels"
+	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
 	"netdisk_in_go/utils"
 	"strings"

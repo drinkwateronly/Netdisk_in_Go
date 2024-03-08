@@ -15,17 +15,14 @@ func Router() *gin.Engine {
 	// 更新命令：swag init
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	docs.SwaggerInfo.BasePath = ""
-	// 通用
-	r.GET("/helloworld", func(context *gin.Context) {
-		context.Writer.Write([]byte("/helloworld"))
-	})
 
+	// 通用
 	r.GET("/notice/list", handler.NoticeList)
 	r.GET("/param/grouplist", handler.GetCopyright)
 
 	// 用户
-	r.GET("/user/login", handler.UserLogin)
 	r.POST("/user/register", handler.UserRegister)
+	r.GET("/user/login", handler.UserLogin)
 	r.GET("/user/checkuserlogininfo", handler.CheckLogin)
 
 	// 存储
@@ -46,6 +43,7 @@ func Router() *gin.Engine {
 	fileAPI.Use(handler.Authentication)
 	fileAPI.POST("/createFold", handler.CreateFolder)
 	fileAPI.POST("/createFile", handler.CreateFile)
+
 	fileAPI.POST("/deletefile", handler.DeleteFile)
 	fileAPI.POST("/batchdeletefile", handler.DeleteFilesInBatch)
 	fileAPI.POST("/renamefile", handler.RenameFile)
@@ -63,7 +61,7 @@ func Router() *gin.Engine {
 	//recoveryAPI := r.Group("")
 	r.GET("recoveryfile/list", handler.GetRecoveryFileList)
 	r.POST("recoveryfile/deleterecoveryfile", handler.DelRecoveryFile)
-	r.POST("recoveryfile/batchdelete", handler.DelRecoveryFileInBatch)
+	r.POST("recoveryfile/batchdelete", handler.DelRecoveryFilesInBatch)
 
 	// 文件分析
 	r.POST("share/sharefile", handler.ShareFiles)

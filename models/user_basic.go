@@ -39,13 +39,16 @@ func FindUserByPhone(DB *gorm.DB, phone string) (*UserBasic, bool) {
 	return &ub, true
 }
 
-func FindUserByIdentity(db *gorm.DB, userId string) (*UserBasic, bool) {
+func FindUserByIdentity(db *gorm.DB, userId string) (*UserBasic, bool, error) {
 	ub := UserBasic{}
-	rowAffected := db.Where("user_id = ?", userId).Find(&ub).RowsAffected
-	if rowAffected == 0 { // 用户不存在
-		return nil, false
+	res := db.Where("user_id = ?", userId).Find(&ub)
+	if res.Error != nil {
+		return nil, false, res.Error
 	}
-	return &ub, true
+	if res.RowsAffected == 0 { // 用户不存在
+		return nil, false, nil
+	}
+	return &ub, true, nil
 }
 
 func GetUserFromCoookie(db *gorm.DB, c *gin.Context) (*UserBasic, error) {
@@ -56,7 +59,7 @@ func GetUserFromCoookie(db *gorm.DB, c *gin.Context) (*UserBasic, error) {
 		return nil, errors.New("cookie校验失败")
 	}
 	// 获取用户信息
-	ub, isExist := FindUserByIdentity(db, uc.UserId)
+	ub, isExist, _ := FindUserByIdentity(db, uc.UserId)
 	if !isExist {
 		return nil, errors.New("用户不存在")
 	}

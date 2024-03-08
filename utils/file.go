@@ -22,6 +22,7 @@ const (
 	AUDIO
 	DIRECTORY
 	OTHER
+	ROOT
 )
 
 var FileTypeId = map[string]uint8{
