@@ -24,6 +24,7 @@ type UserFileListRespAPI struct {
 }
 
 type UserFileTreeNode struct {
+	ParentId   string              `json:"parentId"`
 	UserFileId string              `json:"id"`
 	DirName    string              `json:"label"`
 	FilePath   string              `json:"filePath"`

@@ -2,6 +2,7 @@ package models
 
 import (
 	"archive/zip"
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io"
@@ -239,7 +240,69 @@ select * from temp;`, userId).Find(&dirs)
 	if res.Error != nil {
 		return nil, res.Error
 	}
-	// 递归mysql查询结果与广度优先遍历一致，因此根据广度优先结果构建二叉树
+	// 递归mysql查询结果中，越上层的文件记录越靠前，且同一个父文件夹下的结果都会相邻
+	root := ApiModels.UserFileTreeNode{
+		UserFileId: dirs[0].UserFileId,
+		DirName:    dirs[0].FileName,
+		FilePath:   dirs[0].FilePath,
+		Depth:      0,
+		State:      "closed",
+		IsLeaf:     nil,
+		Children:   make([]*ApiModels.UserFileTreeNode, 0),
+	}
+	// 建队，根节点入队
+	nodeMaps := make(map[string]*ApiModels.UserFileTreeNode)
+	//queue := make([]*ApiModels.UserFileTreeNode, 1)
+	nodeMaps[root.UserFileId] = &root
+	//children := make([]*ApiModels.UserFileTreeNode, 0)
+	// 存放节点文件路径
+	var filePath string
+	//curParentId := root.UserFileId
+	//curNode := &root
+	// 遍历一遍查询结果dirs
+	dirLen := len(dirs)
+	for i := 1; i < dirLen; i++ {
+		// 拼接文件路径
+		if dirs[i].FilePath == "/" {
+			filePath = "/" + dirs[i].FileName
+		} else {
+			filePath = dirs[i].FilePath + "/" + dirs[i].FileName
+		}
+		// 孩子节点
+		child := ApiModels.UserFileTreeNode{
+			ParentId:   dirs[i].ParentId,
+			UserFileId: dirs[i].UserFileId,
+			DirName:    dirs[i].FileName,
+			FilePath:   filePath,
+			Depth:      0,
+			State:      "closed",
+			IsLeaf:     nil,
+			Children:   make([]*ApiModels.UserFileTreeNode, 0),
+		}
+		fmt.Printf("%v\n", child)
+		nodeMaps[dirs[i].UserFileId] = &child
+		nodeMaps[child.ParentId].Children = append(nodeMaps[child.ParentId].Children, &child)
+	}
+	return &root, nil
+}
+
+// BuildFileTreeIn 输入用户id，根据广度优先结果建立文件树，并返回根节点，弃用
+func BuildFileTreeIn(userId string) (*ApiModels.UserFileTreeNode, error) {
+	// 存放查询结果
+	var dirs []UserRepository
+	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
+	res := utils.DB.Raw(`with RECURSIVE temp as
+(
+    SELECT * from user_repository where file_name="/" AND user_id = ?
+    UNION ALL
+    SELECT ur.* from user_repository as ur,temp t 
+	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at is NULL
+)
+select * from temp;`, userId).Find(&dirs)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	// 递归mysql查询结果中，越上层的文件记录越靠前，且同一个父文件夹下的结果都会相邻
 	root := ApiModels.UserFileTreeNode{
 		UserFileId: dirs[0].UserFileId,
 		DirName:    dirs[0].FileName,
@@ -249,19 +312,20 @@ select * from temp;`, userId).Find(&dirs)
 		IsLeaf:     nil,
 	}
 	// 建队，根节点入队
-	queue := make([]*ApiModels.UserFileTreeNode, 1)
-	queue[0] = &root
+	nodeMaps := make(map[string]*ApiModels.UserFileTreeNode)
+	//queue := make([]*ApiModels.UserFileTreeNode, 1)
+	nodeMaps[root.UserFileId] = &root
 	// 设置为当前节点，创建孩子节点空列表
-	curNode := &root
+
 	children := make([]*ApiModels.UserFileTreeNode, 0)
 	// 存放节点文件路径
 	var filePath string
-
+	curParentId := root.UserFileId
 	// 遍历一遍查询结果dirs
 	dirLen := len(dirs)
 	for i := 1; i < dirLen; {
 		// 找到以当前节点为父节点的节点
-		if curNode.UserFileId == dirs[i].ParentId {
+		if curParentId == dirs[i].ParentId {
 			// 拼接文件路径
 			if dirs[i].FilePath == "/" {
 				filePath = "/" + dirs[i].FileName
@@ -280,21 +344,21 @@ select * from temp;`, userId).Find(&dirs)
 			// 当前根节点的子树
 			children = append(children, &child)
 			// 孩子节点入队
-			queue = append(queue, &child)
+			nodeMaps[child.UserFileId] = &child
 			// 当且仅当找到了孩子，指针才移动
 			i++
 		} else {
 			// 找完了当前节点的所有孩子
-			curNode.Children = children
+			nodeMaps[curParentId].Children = children
 			// 当前节点（队头）出队
-			queue = queue[1:]
-			// 下一个节点
-			curNode = queue[0]
+			delete(nodeMaps, curParentId)
+
+			curParentId = dirs[i].ParentId
 			// 重置孩子节点切片
 			children = make([]*ApiModels.UserFileTreeNode, 0)
 		}
 	}
-	curNode.Children = children
+	nodeMaps[curParentId].Children = children
 	return &root, nil
 }
 
