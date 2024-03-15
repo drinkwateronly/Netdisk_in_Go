@@ -18,15 +18,11 @@ import (
 
 func FileUploadPrepare(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, err := utils.ParseCookieFromRequest(c)
-	if err != nil {
-		utils.RespOK(writer, 1001, false, nil, "cookie校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定query请求参数
 	var req ApiModels.FileUploadReqAPI
-	err = c.ShouldBindQuery(&req)
+	err := c.ShouldBindQuery(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "请求参数出错")
 		return
@@ -37,11 +33,6 @@ func FileUploadPrepare(c *gin.Context) {
 
 	// 开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取用户信息
-		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
-		if !isExist {
-			return errors.New("用户不存在")
-		}
 		// 判断存储空间是否足够，前端已经做好了此判断工作。
 		if ub.StorageSize+req.TotalSize > ub.TotalStorageSize {
 			return errors.New("用户存储空间不足")
@@ -190,17 +181,11 @@ func FileUploadPrepare(c *gin.Context) {
 func FileUpload(c *gin.Context) {
 	var savePath string
 	var ur models.UserRepository
-	var uc *utils.UserClaim
 	var err error
 	writer := c.Writer
 
-	// 校验cookie
-	var isAuth bool
-	uc, isAuth = utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 
 	// 绑定请求参数
 	var req ApiModels.FileUploadReqAPI
@@ -237,11 +222,6 @@ func FileUpload(c *gin.Context) {
 
 	// 所有文件分片上传完成，并得到了文件信息，开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取用户信息
-		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
-		if !isExist {
-			utils.RespBadReq(writer, "用户不存在")
-		}
 
 		// 判断父文件夹是否存在
 		//parentDir, _, err := models.FindParentDirFromAbsPath(tx, ub.UserId, req.FilePath)
@@ -250,7 +230,7 @@ func FileUpload(c *gin.Context) {
 		//}
 
 		// 判断文件在当前文件夹是否重名
-		if _, isExist, err = models.FindFileByNameAndPath(tx, ub.UserId,
+		if _, isExist, _ := models.FindFileByNameAndPath(tx, ub.UserId,
 			processedFileInfo.AbsPath,
 			processedFileInfo.FileName,
 			processedFileInfo.ExtendName); isExist {
@@ -418,21 +398,11 @@ func FileUpload(c *gin.Context) {
 // @Router /createFile [POST]
 func CreateFile(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, ApiModels.UNAUTHORIZED, false, nil, "cookie校验失败")
-		return
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if !isExist {
-		utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
-		return
-	}
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
 	var req ApiModels.CreateFileReqAPI
-	err = c.ShouldBindJSON(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -515,11 +485,8 @@ func CreateFile(c *gin.Context) {
 func CreateFolder(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
-	uc, isExist := utils.CheckCookie(c)
-	if !isExist {
-		utils.RespOK(writer, ApiModels.UNAUTHORIZED, false, nil, "cookie校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var r ApiModels.CreateFolderRequest
 	err := c.ShouldBind(&r)
 	if err != nil {
@@ -528,12 +495,6 @@ func CreateFolder(c *gin.Context) {
 	}
 	// 开启事务
 	err = utils.DB.Transaction(func(tx *gorm.DB) error {
-		// 获取用户信息
-		ub, isExist, err := models.FindUserByIdentity(tx, uc.UserId)
-		if !isExist {
-			utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
-			return errors.New("user not exist")
-		}
 		// 查询父文件夹记录
 		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, r.FolderPath)
 		if err != nil {
@@ -588,16 +549,14 @@ func CreateFolder(c *gin.Context) {
 func DeleteFile(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 
 	type DeleteFileRequest struct {
 		UserFileId string `json:"userFileId"`
 	}
 	var r DeleteFileRequest
-	err = c.ShouldBind(&r)
+	err := c.ShouldBind(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -645,22 +604,15 @@ func DeleteFile(c *gin.Context) {
 func DeleteFilesInBatch(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
-	}
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 
 	type DeleteFilesRequest struct {
 		UserFileIds string `json:"userFileIds"`
 	}
 
 	var r DeleteFilesRequest
-	err = c.ShouldBind(&r)
+	err := c.ShouldBind(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -717,16 +669,11 @@ func DeleteFilesInBatch(c *gin.Context) {
 func FilePreview(c *gin.Context) {
 	writer := c.Writer
 
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	fmt.Fprintf(gin.DefaultWriter, "%v", uc)
-
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-		return
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
+	ub := c.MustGet("userBasic").(*models.UserBasic)
+
+	// 获取用户信息
+	ub, isExist, err := models.FindUserByIdentity(utils.DB, ub.UserId)
 	if !isExist {
 		utils.RespBadReq(writer, "用户不存在")
 		return
@@ -748,7 +695,7 @@ func FilePreview(c *gin.Context) {
 	isMin := c.Query("isMin")
 
 	// 获取文件信息
-	ur, isExist1 := models.FindUserFileById(utils.DB, uc.UserId, userFileId)
+	ur, isExist1 := models.FindUserFileById(utils.DB, ub.UserId, userFileId)
 	rp, isExist2 := models.FindRepFileByUserFileId(ub.UserId, userFileId)
 
 	if !(isExist1 && isExist2) {

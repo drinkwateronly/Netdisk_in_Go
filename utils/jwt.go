@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"time"
 )
@@ -49,23 +48,4 @@ func ParseCookie(token string) (*UserClaim, error) {
 		return nil, errors.New("token is not invalid")
 	}
 	return uc, err
-}
-
-// ParseCookieFromRequest 从Context中获取cookie并解析
-func ParseCookieFromRequest(c *gin.Context) (*UserClaim, error) {
-	// 判断请求有无带token
-	token, err := c.Cookie("token")
-	if err != nil {
-		return nil, errors.New("no token in request")
-	}
-	return ParseCookie(token)
-}
-
-// CheckCookie 解析cookie，并判断是否有效
-func CheckCookie(c *gin.Context) (*UserClaim, bool) {
-	uc, err := ParseCookieFromRequest(c)
-	if err != nil {
-		return nil, false
-	}
-	return uc, true
 }

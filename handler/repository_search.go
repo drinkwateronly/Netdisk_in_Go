@@ -15,18 +15,8 @@ import (
 // @Router /filetransfer/getstorage [get]
 func GetUserStorage(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-		return
-	}
-	// 获取用户记录，此处默认用户一定存在，不校验isExist
-	ub, _, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if err != nil {
-		utils.RespOK(writer, 99999, true, nil, err.Error())
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	utils.RespOK(writer, 0, true, ApiModels.UserStorageReqAPI{
 		StorageSize:      ub.StorageSize,
 		TotalStorageSize: ub.TotalStorageSize,
@@ -43,21 +33,11 @@ func GetUserStorage(c *gin.Context) {
 // @Router /file/getfilelist [GET]
 func GetUserFileList(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-		return
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if !isExist {
-		utils.RespOK(writer, ApiModels.USERNOTEXIST, false, nil, "用户不存在")
-		return
-	}
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
 	var req ApiModels.UserFileListReqAPI
-	err = c.ShouldBindQuery(&req)
+	err := c.ShouldBindQuery(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "请求参数不正确")
 		return
@@ -88,13 +68,11 @@ func GetUserFileList(c *gin.Context) {
 // @Router /file/getfilelist [GET]
 func GetFileTree(c *gin.Context) {
 	writer := c.Writer
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespOK(writer, 99999, false, nil, "用户校验失败")
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 获取用户文件树
 	var root *ApiModels.UserFileTreeNode
-	root, err = models.BuildFileTree(ub.UserId)
+	root, err := models.BuildFileTree(ub.UserId)
 	if err != nil {
 		utils.RespOK(writer, ApiModels.DATABASEERROR, true, root, err.Error())
 		return

@@ -21,15 +21,11 @@ import (
 // @Router /file/getfilelist [GET]
 func MoveFile(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户不存在")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
 	var req api_models.MoveFileReqAPI
-	err = c.ShouldBind(&req)
+	err := c.ShouldBind(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return
@@ -132,14 +128,11 @@ select * from temp;`, sourceFileUr.UserFileId).Find(&allFiles).Error
 // @Failure default {object} api_models.RespData
 // @Router /file/getfilelist [GET]
 func RenameFile(c *gin.Context) {
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
 	writer := c.Writer
-	if err != nil {
-		utils.RespBadReq(writer, "用户不存在")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var req api_models.RenameFileRequest
-	err = c.ShouldBind(&req)
+	err := c.ShouldBind(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "出现错误")
 		return

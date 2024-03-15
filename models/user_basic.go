@@ -1,11 +1,7 @@
 package models
 
 import (
-	"errors"
-	"fmt"
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"netdisk_in_go/utils"
 )
 
 type UserBasic struct {
@@ -49,19 +45,4 @@ func FindUserByIdentity(db *gorm.DB, userId string) (*UserBasic, bool, error) {
 		return nil, false, nil
 	}
 	return &ub, true, nil
-}
-
-func GetUserFromCoookie(db *gorm.DB, c *gin.Context) (*UserBasic, error) {
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	fmt.Fprintf(gin.DefaultWriter, "%v", uc)
-	if !isAuth {
-		return nil, errors.New("cookie校验失败")
-	}
-	// 获取用户信息
-	ub, isExist, _ := FindUserByIdentity(db, uc.UserId)
-	if !isExist {
-		return nil, errors.New("用户不存在")
-	}
-	return ub, nil
 }

@@ -119,13 +119,19 @@ func UserLogin(c *gin.Context) {
 // @Router /user/checkuserlogininfo [GET]
 func CheckLogin(c *gin.Context) {
 	writer := c.Writer
-	uc, err := utils.ParseCookieFromRequest(c)
+	cookie, err := c.Cookie("token")
 	if err != nil {
-		utils.RespOK(writer, 999999, false, nil, "未登录")
+		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
+		return
+	}
+	// 解析出userClaim
+	userClaim, err := utils.ParseCookie(cookie)
+	if err != nil {
+		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
 		return
 	}
 	utils.RespOK(writer, 0, true, ApiModels.UserCheckLoginRespAPI{
-		UserId:   uc.UserId,
-		UserName: uc.Username,
+		UserId:   userClaim.UserId,
+		UserName: userClaim.Username,
 	}, "成功")
 }

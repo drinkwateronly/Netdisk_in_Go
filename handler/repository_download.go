@@ -21,16 +21,8 @@ import (
 // @Router /filetransfer/downloadfile [GET]
 func FileDownload(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, 999999, false, nil, "cookie校验失败")
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
-	}
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	userFileId := c.Query("userFileId")
 
 	// 查询该文件的用户文件记录
@@ -108,18 +100,8 @@ func FileDownload(c *gin.Context) {
 // @Router /filetransfer/batchDownloadFile [GET]
 func FileDownloadInBatch(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie
-	uc, isAuth := utils.CheckCookie(c)
-	if !isAuth {
-		utils.RespOK(writer, ApiModels.UNAUTHORIZED, false, nil, "cookie校验失败")
-		return
-	}
 	// 获取用户信息
-	ub, isExist, err := models.FindUserByIdentity(utils.DB, uc.UserId)
-	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
-		return
-	}
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 获取查询参数，并分割出文件id切片
 	userFileIds := strings.Split(c.Query("userFileIds"), ",")
 	if len(userFileIds) == 0 {
@@ -127,7 +109,7 @@ func FileDownloadInBatch(c *gin.Context) {
 		return
 	}
 	// 找到根据文件id找到用户文件记录
-	userRepos, isExist := models.FindUserFileByIds(ub.UserId, userFileIds)
+	userRepos, _ := models.FindUserFileByIds(ub.UserId, userFileIds)
 	// 根据用户文件记录生成zip压缩文件（核心功能）
 	zipFilePath, err := models.GenZipFromUserRepos(*userRepos...)
 	if err != nil {

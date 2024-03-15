@@ -6,6 +6,7 @@ import (
 	"github.com/swaggo/gin-swagger"
 	docs "netdisk_in_go/docs"
 	"netdisk_in_go/handler"
+	"netdisk_in_go/middleware"
 )
 
 func Router() *gin.Engine {
@@ -21,54 +22,55 @@ func Router() *gin.Engine {
 	r.GET("/param/grouplist", handler.GetCopyright)
 
 	// 用户
-	r.POST("/user/register", handler.UserRegister)
-	r.GET("/user/login", handler.UserLogin)
-	r.GET("/user/checkuserlogininfo", handler.CheckLogin)
+	userService := r.Group("user")
+	userService.POST("/register", handler.UserRegister)
+	userService.GET("/login", handler.UserLogin)
+	userService.GET("/checkuserlogininfo", handler.CheckLogin)
 
 	// 存储
-	r.GET("/filetransfer/getstorage", handler.GetUserStorage)
-	r.GET("/file/getfilelist", handler.GetUserFileList)
-	r.GET("/filetransfer/uploadfile", handler.FileUploadPrepare)
-	r.POST("/filetransfer/uploadfile", handler.FileUpload)
-
-	// 文件下载
-	r.GET("/filetransfer/downloadfile", handler.FileDownload)
-	r.GET("/filetransfer/batchDownloadFile", handler.FileDownloadInBatch)
-
-	// 文件操作
-	r.GET("/filetransfer/preview", handler.FilePreview)
+	fileTransfer := r.Group("filetransfer")
+	fileTransfer.Use(middleware.Authentication)
+	fileTransfer.GET("/getstorage", handler.GetUserStorage)
+	fileTransfer.GET("/uploadfile", handler.FileUploadPrepare)
+	fileTransfer.POST("/uploadfile", handler.FileUpload)
+	fileTransfer.GET("/downloadfile", handler.FileDownload)
+	fileTransfer.GET("/batchDownloadFile", handler.FileDownloadInBatch)
+	fileTransfer.GET("/preview", handler.FilePreview)
 
 	// 文件夹操作
-	fileAPI := r.Group("file")
-	fileAPI.Use(handler.Authentication)
-	fileAPI.POST("/createFold", handler.CreateFolder)
-	fileAPI.POST("/createFile", handler.CreateFile)
-
-	fileAPI.POST("/deletefile", handler.DeleteFile)
-	fileAPI.POST("/batchdeletefile", handler.DeleteFilesInBatch)
-	fileAPI.POST("/renamefile", handler.RenameFile)
-	fileAPI.GET("/getfiletree", handler.GetFileTree)
-	fileAPI.POST("/movefile", handler.MoveFile)
+	fileOperation := r.Group("file")
+	fileOperation.Use(middleware.Authentication)
+	fileOperation.GET("/getfilelist", handler.GetUserFileList)
+	fileOperation.POST("/createFold", handler.CreateFolder)
+	fileOperation.POST("/createFile", handler.CreateFile)
+	fileOperation.POST("/deletefile", handler.DeleteFile)
+	fileOperation.POST("/batchdeletefile", handler.DeleteFilesInBatch)
+	fileOperation.POST("/renamefile", handler.RenameFile)
+	fileOperation.GET("/getfiletree", handler.GetFileTree)
+	fileOperation.POST("/movefile", handler.MoveFile)
 
 	// office
-	officeAPI := r.Group("office")
-	officeAPI.POST("/previewofficefile", handler.PreviewOfficeFile)
-	officeAPI.GET("/filedownload", handler.OfficeFileDownload)
-	officeAPI.GET("/preview", handler.OfficeFilePreview)
-	officeAPI.POST("/callback", handler.OfficeCallback)
+	officeService := r.Group("office")
+	officeService.Use(middleware.Authentication)
+	officeService.POST("/previewofficefile", handler.PreviewOfficeFile)
+	officeService.GET("/filedownload", handler.OfficeFileDownload)
+	officeService.GET("/preview", handler.OfficeFilePreview)
+	officeService.POST("/callback", handler.OfficeCallback)
 
-	//回收站
-	//recoveryAPI := r.Group("")
-	r.GET("recoveryfile/list", handler.GetRecoveryFileList)
-	r.POST("recoveryfile/deleterecoveryfile", handler.DelRecoveryFile)
-	r.POST("recoveryfile/batchdelete", handler.DelRecoveryFilesInBatch)
+	// 回收站
+	recoveryService := r.Group("recovery")
+	recoveryService.Use(middleware.Authentication)
+	recoveryService.GET("list", handler.GetRecoveryFileList)
+	recoveryService.POST("deleterecoveryfile", handler.DelRecoveryFile)
+	recoveryService.POST("batchdelete", handler.DelRecoveryFilesInBatch)
 
-	// 文件分析
-	r.POST("share/sharefile", handler.ShareFiles)
-	r.GET("/share/checkendtime", handler.CheckShareEndTime)
-	r.GET("/share/sharetype", handler.CheckShareType)
-	r.GET("/share/checkextractioncode", handler.CheckShareExtractionCode)
-	r.GET("/share/sharefileList", handler.GetShareFileList)
-	r.POST("share/savesharefile", handler.SaveShareFile)
+	// 文件分享
+	shareService := r.Group("share")
+	shareService.POST("/sharefile", handler.ShareFiles)
+	shareService.GET("/checkendtime", handler.CheckShareEndTime)
+	shareService.GET("/sharetype", handler.CheckShareType)
+	shareService.GET("/checkextractioncode", handler.CheckShareExtractionCode)
+	shareService.GET("/sharefileList", handler.GetShareFileList)
+	shareService.POST("/savesharefile", handler.SaveShareFile)
 	return r
 }

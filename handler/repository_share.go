@@ -14,14 +14,10 @@ import (
 
 func ShareFiles(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var req ApiModels.FileShareReq
-	err = c.ShouldBind(&req)
+	err := c.ShouldBind(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误1")
 		return
@@ -113,12 +109,6 @@ func ShareFiles(c *gin.Context) {
 
 func CheckShareEndTime(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	_, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
 	shareBatchId := c.Query("shareBatchNum")
 	shareBasic := models.ShareBasic{}
 	res := utils.DB.Where("share_batch_id = ?", shareBatchId).Find(&shareBasic)
@@ -135,12 +125,6 @@ func CheckShareEndTime(c *gin.Context) {
 
 func CheckShareType(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	_, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
 	shareBatchId := c.Query("shareBatchNum")
 	shareBasic := models.ShareBasic{}
 	_ = utils.DB.Where("share_batch_id = ?", shareBatchId).Find(&shareBasic)
@@ -149,12 +133,6 @@ func CheckShareType(c *gin.Context) {
 
 func CheckShareExtractionCode(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	_, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
 	shareBatchId := c.Query("shareBatchNum")
 	extractionCode := c.Query("extractionCode")
 
@@ -172,11 +150,6 @@ func CheckShareExtractionCode(c *gin.Context) {
 func GetShareFileList(c *gin.Context) {
 	writer := c.Writer
 	// 校验cookie，获取用户信息
-	_, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
 	shareBatchId := c.Query("shareBatchNum")
 	shareFilePath := c.Query("shareFilePath")
 	shareRps, total, err := models.FindShareFilesByPath(shareFilePath, shareBatchId)
@@ -188,14 +161,10 @@ func GetShareFileList(c *gin.Context) {
 
 func SaveShareFile(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var req ApiModels.SaveShareReq
-	err = c.ShouldBind(&req)
+	err := c.ShouldBind(&req)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误1")
 		return

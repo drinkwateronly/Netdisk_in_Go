@@ -21,16 +21,12 @@ import (
 // @Router /recoveryfile/list [GET]
 func GetRecoveryFileList(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var recoveryFiles []ApiModels.RecoveryListRespAPI
 	res := utils.DB.Model(models.RecoveryBasic{}).Where("user_id = ?", ub.UserId).Scan(&recoveryFiles)
 	if res.Error != nil {
-		utils.RespOK(writer, 99999, false, nil, err.Error())
+		utils.RespOK(writer, 99999, false, nil, "")
 		return
 	}
 	utils.RespOkWithDataList(writer, 0, recoveryFiles, len(recoveryFiles), "文件列表")
@@ -47,15 +43,12 @@ func GetRecoveryFileList(c *gin.Context) {
 // @Router /recoveryfile/deleterecoveryfile [POST]
 func DelRecoveryFile(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
+
 	// 绑定post载荷的json格式参数
 	var r ApiModels.DelRecoveryReqAPI
-	err = c.ShouldBindJSON(&r)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误")
 		return
@@ -79,15 +72,11 @@ func DelRecoveryFile(c *gin.Context) {
 // @Router /recoveryfile/deleterecoveryfile [POST]
 func DelRecoveryFilesInBatch(c *gin.Context) {
 	writer := c.Writer
-	// 校验cookie，获取用户信息
-	ub, err := models.GetUserFromCoookie(utils.DB, c)
-	if err != nil {
-		utils.RespBadReq(writer, "用户校验失败")
-		return
-	}
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
 
 	var r ApiModels.DelRecoveryFilesInBatchReq
-	err = c.ShouldBindJSON(&r)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		utils.RespBadReq(writer, "参数错误")
 		return
