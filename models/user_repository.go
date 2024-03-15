@@ -88,11 +88,10 @@ func FindFileByNameAndPath(db *gorm.DB, userId, filePath, fileName, extendName s
 	return &ur, true, nil
 }
 
-func FindUserFileById(userId, userFileId string) (*UserRepository, bool) {
+func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, bool) {
 	var file UserRepository
 	// 分页查询
-	rowsAffected := utils.DB.
-		Where("user_id = ? and user_file_id = ?", userId, userFileId).
+	rowsAffected := tx.Where("user_id = ? and user_file_id = ?", userId, userFileId).
 		Find(&file).RowsAffected
 	if rowsAffected == 0 { // 文件不存在
 		return nil, false
@@ -516,4 +515,30 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 		}
 	}
 	return zipFilePath, nil
+}
+
+// FindFolderFromAbsPath 根据文件夹绝对路径查询记录
+func FindFolderFromAbsPath(tx *gorm.DB, userId, absPath string) (*UserRepository, error) {
+	var file UserRepository
+	if absPath == "/" {
+		err := tx.Where("user_id = ? AND file_name = '/'", userId).First(&file).Error
+		if err != nil {
+			// err包括记录不存在
+			return nil, err
+		}
+		return &file, nil
+	}
+	// 从绝对路径分离出文件夹名称及其父文件夹绝对路径
+	parentPath, folderName, err := utils.SplitAbsPath(absPath)
+	if err != nil {
+		return nil, err
+	}
+	// 查询该文件夹
+	err = tx.Where("file_path = ? AND file_name = ? AND user_id = ? AND is_dir = 1", parentPath, folderName, userId).
+		Find(&file).Error
+	if err != nil {
+		// err包括记录不存在
+		return nil, err
+	}
+	return &file, err
 }

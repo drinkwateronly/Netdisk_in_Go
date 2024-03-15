@@ -97,3 +97,15 @@ func TestFileIsExist(t *testing.T) {
 	}
 
 }
+
+func TestPathSplit(t *testing.T) {
+	fmt.Println(utils.SplitAbsPath("/"))
+	fmt.Println(utils.SplitAbsPath("/abc/123"))
+	fmt.Println(utils.SplitAbsPath("/abc/ass.123"))
+}
+
+func TestRenameConflictFile(t *testing.T) {
+	fmt.Println(utils.RenameConflictFile("123"))
+	fmt.Println(utils.RenameConflictFile("(1)"))
+	fmt.Println(utils.RenameConflictFile("a(1)"))
+}

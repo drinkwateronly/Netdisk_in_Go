@@ -14,7 +14,16 @@ definitions:
       project:
         type: string
     type: object
-  api_models.FileUploadApiReq:
+  api_models.CreateFileReqAPI:
+    properties:
+      extendName:
+        type: string
+      fileName:
+        type: string
+      filePath:
+        type: string
+    type: object
+  api_models.FileUploadReqAPI:
     properties:
       chunkNumber:
         description: 分片号
@@ -113,6 +122,57 @@ definitions:
       username:
         type: string
     type: object
+  api_models.UserFileListRespAPI:
+    properties:
+      deleteBatchNum:
+        type: string
+      extendName:
+        type: string
+      fileId:
+        type: string
+      fileName:
+        type: string
+      filePath:
+        type: string
+      fileSize:
+        type: integer
+      fileType:
+        type: integer
+      isDir:
+        type: integer
+      modifyTime:
+        type: string
+      parentId:
+        type: string
+      uploadTime:
+        type: string
+      userFileId:
+        type: string
+      userId:
+        type: string
+    type: object
+  api_models.UserFileTreeNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/api_models.UserFileTreeNode'
+        type: array
+      depth:
+        type: integer
+      filePath:
+        type: string
+      iconClass:
+        type: string
+      id:
+        type: string
+      isLeaf: {}
+      label:
+        type: string
+      parentId:
+        type: string
+      state:
+        type: string
+    type: object
   api_models.UserLoginRespAPI:
     properties:
       token:
@@ -128,23 +188,29 @@ definitions:
 info:
   contact: {}
 paths:
-  /file/getfilelist:
-    get:
+  /createFile:
+    post:
       consumes:
       - application/json
       parameters:
-      - in: query
-        name: currentPage
-        type: integer
-      - in: query
-        name: filePath
-        type: string
-      - in: query
-        name: fileType
-        type: integer
-      - in: query
-        name: pageCount
-        type: integer
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api_models.CreateFileReqAPI'
+      - description: 用户名
+        in: body
+        name: username
+        required: true
+        schema:
+          type: string
+      - description: 密码
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
       produces:
       - application/json
       responses:
@@ -156,7 +222,28 @@ paths:
           description: 参数出错
           schema:
             type: string
-      summary: 获取用户文件列表
+      summary: 文件创建，仅支持excel，word，ppt的创建
+  /file/getfilelist:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 文件列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/api_models.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api_models.UserFileTreeNode'
+              type: object
+        "400":
+          description: 参数出错
+          schema:
+            type: string
+      summary: 获取用户从根目录开始的文件树
   /filetransfer/batchDownloadFile:
     get:
       parameters:
@@ -234,7 +321,7 @@ paths:
         name: req
         required: true
         schema:
-          $ref: '#/definitions/api_models.FileUploadApiReq'
+          $ref: '#/definitions/api_models.FileUploadReqAPI'
       - description: Cookie
         in: query
         name: cookie

@@ -603,7 +603,7 @@ func DeleteFile(c *gin.Context) {
 		return
 	}
 	// 如果文件不存在，删除失败
-	ur, isExist := models.FindUserFileById(ub.UserId, r.UserFileId)
+	ur, isExist := models.FindUserFileById(utils.DB, ub.UserId, r.UserFileId)
 	if !isExist {
 		// 找不到记录
 		utils.RespOK(writer, 1, false, nil, "文件不存在")
@@ -748,7 +748,7 @@ func FilePreview(c *gin.Context) {
 	isMin := c.Query("isMin")
 
 	// 获取文件信息
-	ur, isExist1 := models.FindUserFileById(uc.UserId, userFileId)
+	ur, isExist1 := models.FindUserFileById(utils.DB, uc.UserId, userFileId)
 	rp, isExist2 := models.FindRepFileByUserFileId(ub.UserId, userFileId)
 
 	if !(isExist1 && isExist2) {

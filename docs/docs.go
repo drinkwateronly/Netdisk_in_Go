@@ -15,6 +15,60 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/createFile": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "文件创建，仅支持excel，word，ppt的创建",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api_models.CreateFileReqAPI"
+                        }
+                    },
+                    {
+                        "description": "用户名",
+                        "name": "username",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "密码",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api_models.RespData"
+                        }
+                    },
+                    "400": {
+                        "description": "参数出错",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/file/getfilelist": {
             "get": {
                 "consumes": [
@@ -23,34 +77,24 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "获取用户文件列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "name": "currentPage",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "filePath",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "fileType",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "name": "pageCount",
-                        "in": "query"
-                    }
-                ],
+                "summary": "获取用户从根目录开始的文件树",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "文件列表",
                         "schema": {
-                            "$ref": "#/definitions/api_models.RespData"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api_models.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api_models.UserFileTreeNode"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -185,7 +229,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api_models.FileUploadApiReq"
+                            "$ref": "#/definitions/api_models.FileUploadReqAPI"
                         }
                     },
                     {
@@ -504,7 +548,21 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.FileUploadApiReq": {
+        "api_models.CreateFileReqAPI": {
+            "type": "object",
+            "properties": {
+                "extendName": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                }
+            }
+        },
+        "api_models.FileUploadReqAPI": {
             "type": "object",
             "properties": {
                 "chunkNumber": {
@@ -640,6 +698,83 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "api_models.UserFileListRespAPI": {
+            "type": "object",
+            "properties": {
+                "deleteBatchNum": {
+                    "type": "string"
+                },
+                "extendName": {
+                    "type": "string"
+                },
+                "fileId": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "integer"
+                },
+                "fileType": {
+                    "type": "integer"
+                },
+                "isDir": {
+                    "type": "integer"
+                },
+                "modifyTime": {
+                    "type": "string"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "uploadTime": {
+                    "type": "string"
+                },
+                "userFileId": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "api_models.UserFileTreeNode": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api_models.UserFileTreeNode"
+                    }
+                },
+                "depth": {
+                    "type": "integer"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "iconClass": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isLeaf": {},
+                "label": {
+                    "type": "string"
+                },
+                "parentId": {
+                    "type": "string"
+                },
+                "state": {
                     "type": "string"
                 }
             }

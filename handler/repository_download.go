@@ -34,7 +34,7 @@ func FileDownload(c *gin.Context) {
 	userFileId := c.Query("userFileId")
 
 	// 查询该文件的用户文件记录
-	ur, isExist := models.FindUserFileById(ub.UserId, userFileId)
+	ur, isExist := models.FindUserFileById(utils.DB, ub.UserId, userFileId)
 	if !isExist {
 		utils.RespOK(writer, ApiModels.FILENOTEXIST, false, nil, "文件记录不存在")
 		return

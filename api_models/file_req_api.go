@@ -83,3 +83,15 @@ type SaveShareReq struct {
 	UserFileIds   string `form:"userFileIds"`
 	ShareBatchNum string `form:"shareBatchNum"`
 }
+
+// MoveFileReqAPI 文件移动请求API
+type MoveFileReqAPI struct {
+	FilePath   string `json:"filePath"`
+	UserFileId string `json:"userFileId"`
+}
+
+// RenameFileRequest 文件重命名请求API
+type RenameFileRequest struct {
+	FileName   string `json:"fileName"`
+	UserFileId string `json:"userFileId"`
+}
