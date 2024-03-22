@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v4"
+	"netdisk_in_go/sysconfig"
 	"time"
 )
 
@@ -13,19 +14,23 @@ type UserClaim struct {
 	jwt.RegisteredClaims // 不要写成RegisteredClaims jwt.RegisteredClaims
 }
 
-func GenerateToken(username, phone, userId string, expireTime int) (string, error) {
+// GenerateToken 根据UserClaim所需字段签发cookie
+func GenerateToken(username, phone, userId string) (string, error) {
+	issuer := sysconfig.Config.JWTConfig.Key
+	key := sysconfig.Config.JWTConfig.Key
+	cookieDuration := sysconfig.Config.JWTConfig.CookieDuration
 	uc := UserClaim{
 		Username: username,
 		Phone:    phone,
 		UserId:   userId,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "CHENJIE",
-			NotBefore: jwt.NewNumericDate(time.Now()), // 在该时间前生效
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(expireTime))),
+			Issuer:    issuer,
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                  // 在该时间前生效
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(cookieDuration))), // 持续时长
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, uc)
-	tokenString, err := token.SignedString([]byte("jwt-key")) // todo:key放到配置文件中
+	tokenString, err := token.SignedString(key) // 根据配置文件的key
 	if err != nil {
 		return "", err
 	}

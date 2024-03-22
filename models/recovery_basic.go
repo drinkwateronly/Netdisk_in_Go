@@ -2,7 +2,6 @@ package models
 
 import (
 	"gorm.io/gorm"
-	"netdisk_in_go/utils"
 	"time"
 )
 
@@ -40,5 +39,5 @@ func AddFileToRecoveryBatch(ur *UserRepository, delBatchId string) error {
 		DeleteTime:    time.Now().Format("2006-01-02 15:04:05"),
 		UploadTime:    ur.UploadTime,
 	}
-	return utils.DB.Create(&rb).Error
+	return DB.Create(&rb).Error
 }

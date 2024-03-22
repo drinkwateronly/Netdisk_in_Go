@@ -1,7 +1,7 @@
 package utils
 
 import (
-	ApiModels "netdisk_in_go/api_models"
+	ApiModels "netdisk_in_go/models/api_models"
 	"strings"
 )
 

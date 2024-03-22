@@ -33,7 +33,7 @@ type Document struct {
 type Goback struct {
 }
 
-// Logo the image file at the top left corner of the Editor header
+// Logo the image file at the top and left corner of the Editor header
 type Logo struct {
 	Image         string      `json:"image"`         // the path to the image file used to show in common work mode
 	ImageDark     string      `json:"imageDark"`     //
@@ -104,7 +104,7 @@ type File struct {
 
 type Data struct {
 	File             File   `json:"file"`
-	DocserviceApiUrl string `json:"docserviceApiUrl" default:"https://172.31.226.34:9696/web-apps/apps/api/documents/api.js"`
+	DocserviceApiUrl string `json:"docserviceApiUrl" default:"https://172.171.0.4:9696/web-apps/apps/api/documents/api.js"`
 	ReportName       string `json:"reportName"`
 }
 

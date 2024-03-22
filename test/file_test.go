@@ -108,4 +108,6 @@ func TestRenameConflictFile(t *testing.T) {
 	fmt.Println(utils.RenameConflictFile("123"))
 	fmt.Println(utils.RenameConflictFile("(1)"))
 	fmt.Println(utils.RenameConflictFile("a(1)"))
+
+	fmt.Println("/abc/123"[len("/abc"):])
 }

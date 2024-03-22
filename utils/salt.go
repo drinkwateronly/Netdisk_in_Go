@@ -1,6 +1,6 @@
 package utils
 
-// MakeSalt 随机生成盐，todo:换成更好的算法
+// MakeSalt 随机生成盐
 func MakeSalt() string {
 	return GenerateUUID()
 }

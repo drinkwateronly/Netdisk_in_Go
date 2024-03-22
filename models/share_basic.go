@@ -7,6 +7,7 @@ import (
 
 type ShareBasic struct {
 	gorm.Model
+	UserId         string    `json:"userId"`
 	Salt           string    `json:"salt"`
 	ShareBatchId   string    `json:"shareBatchNum"`
 	ShareType      uint8     `json:"shareType"`

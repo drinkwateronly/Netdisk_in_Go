@@ -1,2 +1,14 @@
-JWTkey: "cloud-dick-key-cj"
-cookieExpiredTime : 360000 # 36000
+cookieExpiredTime: 3600
+mysql:
+  user: "root"
+  password: "123"
+  dbname: "netdisk"
+  host: "172.31.226.34"
+  port: "3306"
+office:
+  host: "123"
+  port: "3306"
+JWT:
+  key: "this is a JWT key" # 非重要参数
+  issuer: "issuer"  # 非重要参数
+  cookieDuration: 36000 # 秒为单位

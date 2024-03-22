@@ -2,14 +2,13 @@ package test
 
 import (
 	"fmt"
-	ApiModels "netdisk_in_go/api_models"
 	"netdisk_in_go/models"
-	"netdisk_in_go/utils"
+	ApiModels "netdisk_in_go/models/api_models"
 	"testing"
 )
 
 //func TestGorm(t *testing.T) {
-//	db, err := gorm.Open(mysql.Open("root:19990414@tcp(127.0.0.1:3306)/netdisk?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
+//	db, err := gorm.Open(mysql.Open("root:19990414@tcp(127.0.0.1:3306)/netdisk?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.config{})
 //	if err != nil {
 //		panic("failed to connect database")
 //	}
@@ -36,7 +35,7 @@ import (
 //
 //func TestFind(t *testing.T) {
 //	utils.InitMySQL()
-//	ub, isExist := models.FindUserByPhone(utils.DB, "18927841103")
+//	ub, isExist := models.FindUserByPhone(models.DB, "18927841103")
 //	if isExist {
 //		t.Fatal("?")
 //	}
@@ -46,7 +45,7 @@ import (
 //func TestDigui(t *testing.T) {
 //	utils.InitMySQL()
 //	var ur []models.UserRepository
-//	res := utils.DB.Raw(`with RECURSIVE temp as
+//	res := models.DB.Raw(`with RECURSIVE temp as
 //(
 //    select * from user_repository where file_name="/"
 //    union all
@@ -65,7 +64,7 @@ func BuildFileTree() (*ApiModels.UserFileTreeNode, error) {
 	// 存放查询结果
 	var dirs []models.UserRepository
 	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
-	res := utils.DB.Raw(`with RECURSIVE temp as
+	res := models.DB.Raw(`with RECURSIVE temp as
 (
     SELECT * from user_repository where file_name="/" AND user_id = '7e848eb2-a569-4a5b-a828-51d985c60896'
     UNION ALL
@@ -146,7 +145,6 @@ select * from temp;`).Find(&dirs)
 }
 
 func TestBuildTree(t *testing.T) {
-	utils.InitMySQL()
 	BuildFileTree()
 
 }

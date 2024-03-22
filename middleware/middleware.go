@@ -22,7 +22,7 @@ func Authentication(c *gin.Context) {
 	}
 	// 根据userClaim的用户id查询用户基本信息
 	var userBasic models.UserBasic
-	res := utils.DB.Where("user_id = ?", userClaim.UserId).Find(&userBasic)
+	res := models.DB.Where("user_id = ?", userClaim.UserId).Find(&userBasic)
 	if res.Error != nil || res.RowsAffected == 0 {
 		utils.RespOK(writer, 999999, false, nil, "用户不存在")
 		return

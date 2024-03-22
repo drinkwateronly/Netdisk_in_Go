@@ -18,7 +18,7 @@ func TestPassword(t *testing.T) {
 }
 
 func TestCode(t *testing.T) {
-
-	fmt.Println(utils.GenerateRandCode())
-	fmt.Println(utils.GenerateRandCode())
+	for i := 0; i < 5; i++ {
+		fmt.Println(utils.GenerateRandCode())
+	}
 }

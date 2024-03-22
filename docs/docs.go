@@ -379,6 +379,170 @@ const docTemplate = `{
                 }
             }
         },
+        "/share/checkextractioncode": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "校验分享提取码",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分享批次id",
+                        "name": "shareBatchNum",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "schema": {
+                            "$ref": "#/definitions/api_models.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/share/sharefile": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "分享文件",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api_models.FileShareReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api_models.RespDataList"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "datalist": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/api_models.RecoveryListRespAPI"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数出错",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/share/sharefileList": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "获取请求路径下的分享文件列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分享批次id",
+                        "name": "shareBatchNum",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "分享批次内路径",
+                        "name": "shareFilePath",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api_models.RespDataList"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "dataList": {
+                                            "$ref": "#/definitions/api_models.GetShareFileListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/share/sharetype": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "检查文件分享类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分享批次id",
+                        "name": "shareBatchNum",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api_models.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api_models.CheckShareTypeResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/user/checkuserlogininfo": {
             "get": {
                 "consumes": [
@@ -525,6 +689,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "api_models.CheckShareTypeResp": {
+            "type": "object",
+            "properties": {
+                "shareType": {
+                    "type": "integer"
+                }
+            }
+        },
         "api_models.CopyrightAPI": {
             "type": "object",
             "properties": {
@@ -558,6 +730,27 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "filePath": {
+                    "type": "string"
+                }
+            }
+        },
+        "api_models.FileShareReq": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "description": "分享结束时长",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "未使用",
+                    "type": "string"
+                },
+                "shareType": {
+                    "description": "分享类型，有验证码时为1",
+                    "type": "integer"
+                },
+                "userFileIds": {
+                    "description": "分享的用户文件ids",
                     "type": "string"
                 }
             }
@@ -604,6 +797,35 @@ const docTemplate = `{
                     "description": "文件总大小",
                     "type": "integer",
                     "minimum": 0
+                }
+            }
+        },
+        "api_models.GetShareFileListResp": {
+            "type": "object",
+            "properties": {
+                "extendName": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "integer"
+                },
+                "fileType": {
+                    "type": "integer"
+                },
+                "isDir": {
+                    "type": "integer"
+                },
+                "shareBatchNum": {
+                    "type": "string"
+                },
+                "shareFilePath": {
+                    "type": "string"
+                },
+                "userFileId": {
+                    "type": "string"
                 }
             }
         },

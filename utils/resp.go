@@ -3,7 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"net/http"
-	"netdisk_in_go/api_models"
+	"netdisk_in_go/models/api_models"
 )
 
 func RespOK(w http.ResponseWriter, code int, success bool, data interface{}, msg string) {
@@ -45,7 +45,7 @@ func RespOkWithDataList(w http.ResponseWriter, code int, dataList interface{}, t
 		ret, _ = json.Marshal(api_models.RespDataList{
 			Code:     code,
 			Success:  true,
-			DataList: [0]interface{}{},
+			DataList: [0]interface{}{}, // [0]的原因是需要其在没有数据的时候仍然返回一个切片
 			Total:    total,
 			Message:  msg,
 		})
@@ -63,7 +63,3 @@ func RespOkWithDataList(w http.ResponseWriter, code int, dataList interface{}, t
 		panic(err)
 	}
 }
-
-//func RespOKList(w http.ResponseWriter, data interface{}, msg string) {
-//	RespList(w, 0, data, msg)
-//}

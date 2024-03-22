@@ -225,7 +225,6 @@ func MergeChunksToFile(chuckName, fileName string, totalChunks uint) error {
 		// 读取分片
 		chunkFile, err := os.OpenFile(chunkFilePath, os.O_RDONLY, 0777)
 		if err != nil {
-			MyLog.Println(err)
 			return err
 		}
 		// 读取分片文件
