@@ -28,8 +28,8 @@ func (table *UserBasic) TableName() string {
 
 func FindUserByPhone(DB *gorm.DB, phone string) (*UserBasic, bool) {
 	ub := UserBasic{}
-	res := DB.Where("phone = ?", phone).Find(&ub)
-	if res.RowsAffected == 0 || res.Error != nil { // 用户不存在
+	res := DB.Where("phone = ?", phone).First(&ub)
+	if res.Error != nil { // 用户不存在
 		return nil, false
 	}
 	return &ub, true

@@ -6,9 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"netdisk_in_go/common"
+	"netdisk_in_go/common/filehandler"
+	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
 	"netdisk_in_go/office_models"
-	"netdisk_in_go/utils"
 	"os"
 )
 
@@ -17,26 +19,26 @@ func PreviewOfficeFile(c *gin.Context) {
 	writer := c.Writer
 	// 从cookie获取用户信息
 	cookie, _ := c.Cookie("token")
-	uc, _ := utils.ParseCookie(cookie)
+	uc, _ := common.ParseCookie(cookie)
 
 	// 获取用户信息
 	ub, isExist, err := models.FindUserByIdentity(models.DB, uc.UserId)
 	if !isExist {
-		utils.RespBadReq(writer, "用户不存在")
+		response.RespBadReq(writer, "用户不存在")
 		return
 	}
 	// 处理请求参数
 	json := make(map[string]interface{})
 	err = c.ShouldBind(&json)
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		response.RespBadReq(writer, "出现错误")
 		return
 	}
 	userFileId := json["userFileId"].(string)
 	// 查询用户文件基本信息
 	rb, isExist := models.FindUserFileById(models.DB, ub.UserId, userFileId)
 	if !isExist {
-		utils.RespBadReq(writer, "用户信息不存在")
+		response.RespBadReq(writer, "用户信息不存在")
 		return
 	}
 
@@ -59,9 +61,9 @@ func PreviewOfficeFile(c *gin.Context) {
 		Name:  uc.UserId,
 		Group: "",
 	}
-	documentType, _ := utils.GetOfficeDocumentType(rb.ExtendName)
+	documentType, _ := filehandler.GetOfficeDocumentType(rb.ExtendName)
 
-	utils.RespOK(writer, 200, true, office_models.NewData(user, cookie, document, documentType), "获取报告成功！")
+	response.RespOK(writer, 200, true, office_models.NewData(user, cookie, document, documentType), "获取报告成功！")
 	return
 }
 
@@ -71,10 +73,10 @@ func OfficeFileDownload(c *gin.Context) {
 	defer file.Close()
 	_, err = io.Copy(c.Writer, file)
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		response.RespBadReq(writer, "出现错误")
 		return
 	}
-	utils.RespOK(writer, 0, true,
+	response.RespOK(writer, 0, true,
 		struct {
 			Error int `json:"error"`
 		}{
@@ -153,16 +155,16 @@ func OfficeFilePreview(c *gin.Context) {
 	userFileId := c.Query("userFileId")
 	cookie := c.Query("token")
 	// 校验cookie
-	uc, err := utils.ParseCookie(cookie)
+	uc, err := common.ParseCookie(cookie)
 
 	if err != nil {
-		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "cookie校验失败")
+		response.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "cookie校验失败")
 		return
 	}
 	// 获取用户信息
 	ub, isExist, err := models.FindUserByIdentity(models.DB, uc.UserId)
 	if !isExist {
-		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "用户不存在")
+		response.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "用户不存在")
 		return
 	}
 	// 处理请求参数
@@ -170,7 +172,7 @@ func OfficeFilePreview(c *gin.Context) {
 	// 获取文件
 	rp, isExist := models.FindRepFileByUserFileId(ub.UserId, userFileId)
 	if !isExist {
-		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "文件不存在")
+		response.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "文件不存在")
 		return
 	}
 
@@ -178,9 +180,9 @@ func OfficeFilePreview(c *gin.Context) {
 	defer file.Close()
 	_, err = io.Copy(c.Writer, file)
 	if err != nil {
-		utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "出错")
+		response.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "出错")
 		return
 	}
-	utils.RespOK(writer, 0, true, office_models.OfficeError{Error: 0}, "下载成功")
+	response.RespOK(writer, 0, true, office_models.OfficeError{Error: 0}, "下载成功")
 
 }

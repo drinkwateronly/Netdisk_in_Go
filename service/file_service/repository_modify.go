@@ -4,30 +4,77 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/filehandler"
+	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
-	"netdisk_in_go/models/api_models"
-	"netdisk_in_go/utils"
 	"strings"
 )
+
+// RenameFile
+// @Summary 文件重命名
+// @Tags Files
+// @Accept json
+// @Produce json
+// @Param req query api.MoveFileReqAPI true "请求"
+// @Success 200 {object} response.RespData "响应"
+// @Router /file/getfilelist [GET]
+func RenameFile(c *gin.Context) {
+	writer := c.Writer
+	// 获取用户信息
+	ub := c.MustGet("userBasic").(*models.UserBasic)
+	var req api.RenameFileRequest
+	err := c.ShouldBind(&req)
+	if err != nil {
+		response.RespBadReq(writer, "出现错误")
+		return
+	}
+	// 校验文件名称
+	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"") {
+		response.RespOKFail(writer, response.FileNameNotValid, nil, "命名失败，文件名称出现非法字符")
+		return
+	}
+	// 更新文件名
+	res := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
+		Updates(models.UserRepository{
+			FileName: req.FileName,
+		})
+	if models.IsDuplicateEntryErr(res.Error) {
+		// 由于user_repository表中设置了UNIQUE INDEX `user_id`(`user_id`, `parent_id`, `file_name`, `extend_name`, `file_type`)
+		// 因此文件记录的上述字段重复时会触发Error 1062 (23000): Duplicate entry
+		response.RespOKFail(writer, response.FileNameNotValid, nil, "文件名重复")
+		return
+	} else if res.RowsAffected == 0 {
+		// 没有出现重复，update也没有影响行数
+		response.RespOKFail(writer, response.FileNotExist, nil, "文件不存在")
+		return
+	}
+	if err != nil {
+		response.RespOKFail(writer, response.DatabaseError, nil, "数据库出错")
+		return
+	}
+	response.RespOKSuccess(writer, 0, nil, "文件名修改成功")
+	return
+}
 
 // MoveFile
 // @Summary 文件移动
 // @Tags Files
 // @Accept json
 // @Produce json
-// @Param req query api_models.MoveFileReqAPI true "请求"
-// @Success 200 {object} api_models.RespData
-// @Failure default {object} api_models.RespData
+// @Param req query api.MoveFileReqAPI true "请求"
+// @Success 200 {object} api.RespData
+// @Failure default {object} api.RespData
 // @Router /file/getfilelist [GET]
 func MoveFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
-	var req api_models.MoveFileReqAPI
+	var req api.MoveFileReqAPI
 	err := c.ShouldBind(&req)
 	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
+		response.RespBadReq(writer, "出现错误")
 		return
 	}
 
@@ -59,7 +106,7 @@ func MoveFile(c *gin.Context) {
 			fileName := sourceFileUr.FileName
 			// 有同名文件，则重新命名，添加后缀
 			if res.RowsAffected != 0 {
-				fileName = utils.RenameConflictFile(fileName)
+				fileName = filehandler.RenameConflictFile(fileName)
 			}
 			// 更新源文件记录
 			if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
@@ -76,7 +123,7 @@ func MoveFile(c *gin.Context) {
 		// 移动文件夹时嵌套文件夹为非法操作
 		// 例如源文件夹'/A/B'移动到目的文件夹`A/B/C`中是非法的，因为C被B包含
 		sourcePath := req.FilePath
-		destPath := utils.ConCatFileFullPath(sourceFileUr.FilePath, sourceFileUr.FileName)
+		destPath := filehandler.ConCatFileFullPath(sourceFileUr.FilePath, sourceFileUr.FileName)
 		// 从路径名判断，源文件夹是否被目的文件夹包含
 		if req.FilePath != "/" && strings.HasPrefix(destPath, sourcePath) {
 			return errors.New("目的文件夹在所移动文件夹内")
@@ -112,56 +159,8 @@ select * from temp;`, sourceFileUr.UserFileId).Find(&allFiles).Error
 		return nil
 	})
 	if err != nil {
-		utils.RespOK(writer, 999999, false, nil, err.Error())
+		response.RespOK(writer, 999999, false, nil, err.Error())
 		return
 	}
-	utils.RespOK(writer, 0, true, nil, "文件移动成功")
-}
-
-// RenameFile
-// @Summary 文件重命名
-// @Tags Files
-// @Accept json
-// @Produce json
-// @Param req query api_models.MoveFileReqAPI true "请求"
-// @Success 200 {object} api_models.RespData
-// @Failure default {object} api_models.RespData
-// @Router /file/getfilelist [GET]
-func RenameFile(c *gin.Context) {
-	writer := c.Writer
-	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
-	var req api_models.RenameFileRequest
-	err := c.ShouldBind(&req)
-	if err != nil {
-		utils.RespBadReq(writer, "出现错误")
-		return
-	}
-	// 校验文件名称
-	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"") {
-		utils.RespOK(writer, 999999, false, nil, "命名失败，文件名称出现非法字符")
-		return
-	}
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
-		ur, isExist := models.FindUserFileById(tx, ub.UserId, req.UserFileId)
-		if !isExist {
-			return errors.New("文件不存在")
-		}
-		res := models.DB.Where("user_id = ? AND file_path = ? AND file_name = ? AND user_file_id != ?", ub.UserId, ur.FilePath, req.FileName, req.UserFileId)
-		if res.RowsAffected != 0 {
-			return errors.New("该目录下同名文件已存在")
-		}
-		if err != nil {
-			return err
-		}
-		if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).Updates(models.UserRepository{FileName: req.FileName}).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		utils.RespOK(writer, 999999, false, nil, err.Error())
-		return
-	}
-	utils.RespOK(writer, 0, true, nil, "文件名修改成功")
+	response.RespOK(writer, 0, true, nil, "文件移动成功")
 }

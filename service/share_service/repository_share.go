@@ -4,9 +4,10 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"netdisk_in_go/common"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
-	ApiModels "netdisk_in_go/models/api_models"
-	"netdisk_in_go/utils"
 	"strings"
 	"time"
 )
@@ -24,21 +25,21 @@ func FilesShare(c *gin.Context) {
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
-	var req ApiModels.FileShareReq
+	var req api.FileShareReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		utils.RespBadReq(writer, "参数错误1")
+		response.RespBadReq(writer, "参数错误1")
 		return
 	}
 
 	// 处理参数
 	endTime, err := time.Parse("2006-01-02 15:04:05", req.EndTime)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.ReqParamNotValid, false, nil, "时间格式错误")
+		response.RespOK(writer, response.ReqParamNotValid, false, nil, "时间格式错误")
 		return
 	}
 	if !time.Now().Before(endTime) {
-		utils.RespOK(writer, ApiModels.ShareExpired, false, nil, "分享文件已过期")
+		response.RespOK(writer, response.ShareExpired, false, nil, "分享文件已过期")
 		return
 	}
 	shareFileIds := strings.Split(req.UserFileIds, ",") // 所有分享的用户文件id
@@ -46,18 +47,18 @@ func FilesShare(c *gin.Context) {
 	// 获取分享的用户文件记录
 	userRps, isExist := models.FindUserFileByIds(ub.UserId, shareFileIds)
 	if !isExist {
-		utils.RespOK(writer, 9999, false, nil, "文件缺失")
+		response.RespOK(writer, 9999, false, nil, "文件缺失")
 		return
 	}
 
 	// 新增分享文件记录
-	shareBatchId := utils.GenerateUUID()
+	shareBatchId := common.GenerateUUID()
 	extractionCode := "" // 默认没有验证码
 	if req.ShareType == 1 {
 		// 验证码
-		extractionCode = utils.GenerateRandCode()
+		extractionCode = common.GenerateRandCode()
 	}
-	salt := utils.MakeSalt() // 用于数据库存储分享验证码时加盐
+	salt := common.MakeSalt() // 用于数据库存储分享验证码时加盐
 
 	// 根据分享的用户文件记录，查询所有相关的文件记录
 	// 若分享文件中包含某个文件夹，则需要查询出该文件夹内的所有文件
@@ -154,7 +155,7 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 			Salt:           salt,
 			ShareBatchId:   shareBatchId,
 			ShareType:      req.ShareType,
-			ExtractionCode: utils.MakePassword(shareBatchId, salt),
+			ExtractionCode: common.MakePassword(shareBatchId, salt),
 			ExpireTime:     endTime,
 		}).Error
 		if err != nil {
@@ -163,10 +164,10 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 		return nil
 	})
 	if err != nil {
-		utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, err.Error())
+		response.RespOK(writer, response.DATABASEERROR, false, nil, err.Error())
 		return
 	}
-	utils.RespOK(writer, 0, true, gin.H{
+	response.RespOK(writer, 0, true, gin.H{
 		"shareBatchNum":  shareBatchId,
 		"extractionCode": extractionCode,
 	}, "")
@@ -186,14 +187,14 @@ func CheckShareEndTime(c *gin.Context) {
 	shareBasic := models.ShareBasic{}
 	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic).Error
 	if err != nil {
-		utils.RespOK(writer, 99999, false, nil, "分享记录不存在")
+		response.RespOK(writer, 99999, false, nil, "分享记录不存在")
 		return
 	}
 	if shareBasic.ExpireTime.Before(time.Now()) {
-		utils.RespOK(writer, 99999, false, nil, "分享已过期")
+		response.RespOK(writer, 99999, false, nil, "分享已过期")
 		return
 	}
-	utils.RespOK(writer, 0, true, nil, "分享有效")
+	response.RespOK(writer, 0, true, nil, "分享有效")
 }
 
 // CheckShareType
@@ -209,10 +210,10 @@ func CheckShareType(c *gin.Context) {
 	shareBasic := models.ShareBasic{}
 	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic).Error
 	if err != nil {
-		utils.RespOK(writer, ApiModels.DatabaseError, false, nil, "分享记录不存在")
+		response.RespOK(writer, response.DatabaseError, false, nil, "分享记录不存在")
 		return
 	}
-	utils.RespOK(writer, ApiModels.Success, true, ApiModels.CheckShareTypeResp{ShareType: shareBasic.ShareType}, "分享类型")
+	response.RespOK(writer, response.Success, true, api.CheckShareTypeResp{ShareType: shareBasic.ShareType}, "分享类型")
 }
 
 // CheckShareExtractionCode
@@ -230,15 +231,15 @@ func CheckShareExtractionCode(c *gin.Context) {
 	shareBasic := models.ShareBasic{}
 	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.ShareExpired, false, nil, "分享批次不存在或已过期")
+		response.RespOK(writer, response.ShareExpired, false, nil, "分享批次不存在或已过期")
 		return
 	}
 
-	if utils.ValidatePassword(extractionCode, shareBasic.Salt, shareBasic.ExtractionCode) {
-		utils.RespOK(writer, ApiModels.Success, true, nil, "验证成功")
+	if common.ValidatePassword(extractionCode, shareBasic.Salt, shareBasic.ExtractionCode) {
+		response.RespOK(writer, response.Success, true, nil, "验证成功")
 		return
 	}
-	utils.RespOK(writer, ApiModels.ExtractionCodeNotValid, false, nil, "提取码出错")
+	response.RespOK(writer, response.ExtractionCodeNotValid, false, nil, "提取码出错")
 }
 
 // GetShareFileList
@@ -251,21 +252,21 @@ func CheckShareExtractionCode(c *gin.Context) {
 func GetShareFileList(c *gin.Context) {
 	writer := c.Writer
 	// 绑定请求参数
-	req := ApiModels.GetShareFileListReq{}
+	req := api.GetShareFileListReq{}
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.ReqParamNotValid, false, nil, "请求参数非法")
+		response.RespOK(writer, response.ReqParamNotValid, false, nil, "请求参数非法")
 		return
 	}
 	// 根据请求路径查询分享文件列表
-	var shareFiles []ApiModels.GetShareFileListResp
+	var shareFiles []api.GetShareFileListResp
 	err = models.DB.Model(models.ShareRepository{}).
 		Where("share_batch_id = ? and share_file_path = ?", req.ShareBatchId, req.ShareFilePath).Scan(&shareFiles).Error
 	if err != nil {
-		utils.RespOK(writer, ApiModels.FileRecordNotExist, false, nil, "分享文件不存在")
+		response.RespOK(writer, response.FileRecordNotExist, false, nil, "分享文件不存在")
 		return
 	}
-	utils.RespOkWithDataList(writer, ApiModels.Success, shareFiles, len(shareFiles), "分享文件列表")
+	response.RespOkWithDataList(writer, response.Success, shareFiles, len(shareFiles), "分享文件列表")
 }
 
 // SaveShareFile
@@ -279,10 +280,10 @@ func SaveShareFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
-	var req ApiModels.SaveShareReq
+	var req api.SaveShareReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.ReqParamNotValid, false, nil, "请求参数非法")
+		response.RespOK(writer, response.ReqParamNotValid, false, nil, "请求参数非法")
 		return
 	}
 
@@ -306,7 +307,7 @@ func SaveShareFile(c *gin.Context) {
 		var userRps []models.UserRepository
 		err = models.DB.Where("user_file_id in ?", userFileIds).Find(&userRps).Error
 		if err != nil {
-			utils.RespOK(writer, 9999, false, nil, err.Error())
+			response.RespOK(writer, 9999, false, nil, err.Error())
 			return nil
 		}
 
@@ -316,7 +317,7 @@ func SaveShareFile(c *gin.Context) {
 			var urs []models.UserRepository
 			for _, curFile := range curFiles {
 				newRecord := models.UserRepository{
-					UserFileId:    utils.GenerateUUID(),
+					UserFileId:    common.GenerateUUID(),
 					FileId:        curFile.FileId,
 					UserId:        userId,
 					FilePath:      curPath,
@@ -357,10 +358,10 @@ func SaveShareFile(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		utils.RespOK(writer, 9999, false, nil, err.Error())
+		response.RespOK(writer, 9999, false, nil, err.Error())
 		return
 	}
-	utils.RespOK(writer, 0, true, nil, "上传成功")
+	response.RespOK(writer, 0, true, nil, "上传成功")
 	return
 
 }
@@ -375,16 +376,16 @@ func SaveShareFile(c *gin.Context) {
 func GetShareList(c *gin.Context) {
 	writer := c.Writer
 	ub := c.MustGet("userBasic").(*models.UserBasic)
-	var req ApiModels.GetShareListReq
+	var req api.GetShareListReq
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.ReqParamNotValid, false, nil, "请求参数非法")
+		response.RespOK(writer, response.ReqParamNotValid, false, nil, "请求参数非法")
 		return
 	}
 	if req.ShareFilePath != "/" {
-		utils.RespOK(writer, ApiModels.NotSupport, false, nil, "暂不支持进入分享文件夹查看")
+		response.RespOK(writer, response.NotSupport, false, nil, "暂不支持进入分享文件夹查看")
 		return
 	}
 	files, total, err := models.FindShareFilesByPathAndPage(ub.UserId, req)
-	utils.RespOkWithDataList(writer, ApiModels.ReqParamNotValid, files, total, "分享文件列表")
+	response.RespOkWithDataList(writer, response.ReqParamNotValid, files, total, "分享文件列表")
 }

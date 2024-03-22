@@ -2,22 +2,23 @@ package file_service
 
 import (
 	"github.com/gin-gonic/gin"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
-	ApiModels "netdisk_in_go/models/api_models"
-	"netdisk_in_go/utils"
 )
 
 // GetUserStorage
 // @Summary 获取用户存储容量
+// @Tags Files
+// @Accept json
 // @Produce json
-// @Success 200 {object} api_models.RespData{data=api_models.UserStorageReqAPI} ""
-// @Failure 400 {object} string "cookie校验失败"
+// @Success 200 {object} response.RespData{data=api.UserStorageResp} "用户存储容量响应"
 // @Router /filetransfer/getstorage [get]
 func GetUserStorage(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
-	utils.RespOK(writer, 0, true, ApiModels.UserStorageReqAPI{
+	response.RespOKSuccess(writer, 0, api.UserStorageResp{
 		StorageSize:      ub.StorageSize,
 		TotalStorageSize: ub.TotalStorageSize,
 	}, "存储容量")
@@ -27,36 +28,35 @@ func GetUserStorage(c *gin.Context) {
 // @Summary 根据文件类型或文件路径进行分页查询用户文件列表
 // @Accept json
 // @Produce json
-// @Param req query api_models.UserFileListReqAPI true "请求"
-// @Success 200 {object} api_models.RespDataList{dataList=[]api_models.UserFileListRespAPI} "文件列表"
-// @Failure 400 {object} string "参数出错"
+// @Param req query api.UserFileListReq true "请求"
+// @Success 200 {object} response.RespDataList{dataList=[]api.UserFileListResp} "文件列表"
 // @Router /file/getfilelist [GET]
 func GetUserFileList(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 绑定请求参数
-	var req ApiModels.UserFileListReqAPI
+	var req api.UserFileListReq
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		utils.RespBadReq(writer, "请求参数不正确")
+		response.RespBadReq(writer, "请求参数不正确")
 		return
 	}
 	// 查询文件记录
-	var files []ApiModels.UserFileListRespAPI
+	var files []api.UserFileListResp
 	var filesTotalCount int
 	if req.FileType == 0 {
-		// 按文件路径分页查询
+		// 不选择文件类型时，按文件路径查找
 		files, filesTotalCount, err = models.FindFilesByPathAndPage(req.FilePath, ub.UserId, req.CurrentPage, req.PageCount)
 	} else {
-		// 按文件类型分页查询
+		// 选择文件类型时，忽略文件路径
 		files, filesTotalCount, err = models.FindFilesByTypeAndPage(req.FileType, ub.UserId, req.CurrentPage, req.PageCount)
 	}
 	if err != nil {
-		utils.RespOK(writer, ApiModels.DATABASEERROR, false, nil, err.Error())
+		response.RespOK(writer, response.DATABASEERROR, false, nil, err.Error())
 		return
 	}
-	utils.RespOkWithDataList(writer, 0, files, filesTotalCount, "文件列表")
+	response.RespOkWithDataList(writer, response.Success, files, filesTotalCount, "文件列表")
 }
 
 // GetFileTree
@@ -71,11 +71,11 @@ func GetFileTree(c *gin.Context) {
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 	// 获取用户文件树
-	var root *ApiModels.UserFileTreeNode
+	var root *api.UserFileTreeNode
 	root, err := models.BuildFileTree(ub.UserId)
 	if err != nil {
-		utils.RespOK(writer, ApiModels.DATABASEERROR, true, root, err.Error())
+		response.RespOK(writer, response.DATABASEERROR, true, root, err.Error())
 		return
 	}
-	utils.RespOK(writer, 0, true, root, "成功")
+	response.RespOK(writer, 0, true, root, "成功")
 }

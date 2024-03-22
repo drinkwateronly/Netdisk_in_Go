@@ -1,4 +1,3 @@
-cookieExpiredTime: 3600
 mysql:
   user: "root"
   password: "123"
@@ -9,6 +8,6 @@ office:
   host: "123"
   port: "3306"
 JWT:
-  key: "this is a JWT key" # 非重要参数
+  key: "this-is-a-JWT-key" # 非重要参数
   issuer: "issuer"  # 非重要参数
   cookieDuration: 36000 # 秒为单位

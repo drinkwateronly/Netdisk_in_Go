@@ -18,6 +18,7 @@ func Router() *gin.Engine {
 	r := gin.Default()
 	// swagger前后端分离
 	// 访问：http://localhost:8080/swagger/index.html
+	// 参考：https://www.jb51.net/article/259993.htm
 	// 更新命令：swag config
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	docs.SwaggerInfo.BasePath = ""

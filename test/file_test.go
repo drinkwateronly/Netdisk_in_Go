@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 	"io"
-	"netdisk_in_go/utils"
+	"netdisk_in_go/common"
 	"os"
 	"strconv"
 	"testing"
@@ -40,7 +40,7 @@ func MergeChunkToFile(fileName string, totalChunks int) (string, error) {
 	}
 	myFileCopy.Close()
 	fileByte, _ := io.ReadAll(myFileCopy)
-	fileMD5 := utils.Md5EncodeByte(fileByte)
+	fileMD5 := common.Md5EncodeByte(fileByte)
 	return fileMD5, nil
 }
 
@@ -59,8 +59,8 @@ func TestFileHash(t *testing.T) {
 	file2, _ := os.OpenFile(filePath2, os.O_RDONLY, 0777)
 	fileByte1, _ := io.ReadAll(file1)
 	fileByte2, _ := io.ReadAll(file2)
-	hash1 := utils.Md5EncodeByte(fileByte1)
-	hash2 := utils.Md5EncodeByte(fileByte2)
+	hash1 := common.Md5EncodeByte(fileByte1)
+	hash2 := common.Md5EncodeByte(fileByte2)
 	fmt.Println(hash1)
 	if hash1 != hash2 {
 		t.Fatal(hash1, hash2)
@@ -81,7 +81,7 @@ func TestMD5(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer file.Close()
-	md5, err := utils.GetFileMd5(file)
+	md5, err := common.GetFileMd5(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,15 +99,15 @@ func TestFileIsExist(t *testing.T) {
 }
 
 func TestPathSplit(t *testing.T) {
-	fmt.Println(utils.SplitAbsPath("/"))
-	fmt.Println(utils.SplitAbsPath("/abc/123"))
-	fmt.Println(utils.SplitAbsPath("/abc/ass.123"))
+	fmt.Println(common.SplitAbsPath("/"))
+	fmt.Println(common.SplitAbsPath("/abc/123"))
+	fmt.Println(common.SplitAbsPath("/abc/ass.123"))
 }
 
 func TestRenameConflictFile(t *testing.T) {
-	fmt.Println(utils.RenameConflictFile("123"))
-	fmt.Println(utils.RenameConflictFile("(1)"))
-	fmt.Println(utils.RenameConflictFile("a(1)"))
+	fmt.Println(common.RenameConflictFile("123"))
+	fmt.Println(common.RenameConflictFile("(1)"))
+	fmt.Println(common.RenameConflictFile("a(1)"))
 
 	fmt.Println("/abc/123"[len("/abc"):])
 }

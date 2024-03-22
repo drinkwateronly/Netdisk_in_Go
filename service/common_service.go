@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/gin-gonic/gin"
-	"netdisk_in_go/models/api_models"
-	"netdisk_in_go/utils"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/response"
 )
 
 // NoticeList
@@ -12,7 +12,7 @@ import (
 // @Produce json
 // @Router /notice/list [GET]
 func NoticeList(c *gin.Context) {
-	utils.RespOK(c.Writer, 0, true, nil, "Notice")
+	response.RespOK(c.Writer, 0, true, nil, "Notice")
 	return
 }
 
@@ -20,10 +20,10 @@ func NoticeList(c *gin.Context) {
 // @Summary 获取copyright, 暂未使用
 // @Accept json
 // @Produce json
-// @Success 200 {object} api_models.CopyrightAPI{} ""
+// @Success 200 {object} api.CopyrightAPI{} ""
 // @Router /param/grouplist [GET]
 func GetCopyright(c *gin.Context) {
-	utils.RespOK(c.Writer, 0, true, api_models.CopyrightAPI{
+	response.RespOK(c.Writer, 0, true, api.CopyrightAPI{
 		LicenseKey:        "",
 		PrimaryDomainName: "",
 		DomainChineseName: "",

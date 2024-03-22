@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io"
-	ApiModels "netdisk_in_go/models/api_models"
-	"netdisk_in_go/models/middle_models"
-	"netdisk_in_go/utils"
+	"netdisk_in_go/common"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/filehandler"
 	"os"
 	"strings"
 	"time"
@@ -39,8 +39,8 @@ func (table UserRepository) TableName() string {
 // FindFilesByPathAndPage
 // 根据文件夹地址filePath、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([]ApiModels.UserFileListRespAPI, int, error) {
-	var files []ApiModels.UserFileListRespAPI
+func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
+	var files []api.UserFileListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
 	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_path = ?", userId, filePath).Scan(&files).Error
 	if err != nil {
@@ -59,8 +59,8 @@ func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([
 // FindFilesByTypeAndPage
 // 根据文件夹类型fileType、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count uint) ([]ApiModels.UserFileListRespAPI, int, error) {
-	var files []ApiModels.UserFileListRespAPI
+func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
+	var files []api.UserFileListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
 	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_type = ?", userId, fileType).Scan(&files).Error
 	if err != nil {
@@ -165,7 +165,7 @@ func DelAllFilesFromDir(delBatchId, userId, parentPath, dirName string) error {
 	// 遍历所有子文件夹
 	for i, file := range files {
 		// 如果该文件是子文件夹，则进入该子文件夹删除文件
-		if file.FileType == utils.DIRECTORY {
+		if file.FileType == filehandler.DIRECTORY {
 			err = DelAllFilesFromDir(delBatchId, userId, file.FilePath, file.FileName)
 			if err != nil {
 				return err
@@ -182,7 +182,7 @@ func DelAllFilesFromDir(delBatchId, userId, parentPath, dirName string) error {
 	return nil
 }
 
-func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName string) (*ApiModels.UserFileTreeNode, error) {
+func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName string) (*api.UserFileTreeNode, error) {
 	var directoryPath string // 文件夹路径
 	// todo: 递归sql
 	// 拼接出这个文件夹的路径
@@ -194,7 +194,7 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 		directoryPath = parentPath + "/" + dirName
 	}
 	// 找到这个文件夹下的所有子文件夹，加排他锁
-	node := ApiModels.UserFileTreeNode{
+	node := api.UserFileTreeNode{
 		UserFileId: userFileId,
 		DirName:    dirName,
 		FilePath:   directoryPath,
@@ -209,7 +209,7 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 		return nil, err
 	}
 
-	children := make([]*ApiModels.UserFileTreeNode, len(files))
+	children := make([]*api.UserFileTreeNode, len(files))
 	// 遍历所有子文件夹
 	for i, file := range files {
 		// 如果该文件是子文件夹，则进入该子文件夹删除文件
@@ -224,7 +224,7 @@ func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName s
 }
 
 // BuildFileTree 输入用户id，根据广度优先结果建立文件树，并返回根节点
-func BuildFileTree(userId string) (*ApiModels.UserFileTreeNode, error) {
+func BuildFileTree(userId string) (*api.UserFileTreeNode, error) {
 	// 存放查询结果
 	var dirs []UserRepository
 	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
@@ -240,20 +240,20 @@ select * from temp;`, userId).Find(&dirs)
 		return nil, res.Error
 	}
 	// 递归mysql查询结果中，越上层的文件记录越靠前，且同一个父文件夹下的结果都会相邻
-	root := ApiModels.UserFileTreeNode{
+	root := api.UserFileTreeNode{
 		UserFileId: dirs[0].UserFileId,
 		DirName:    dirs[0].FileName,
 		FilePath:   dirs[0].FilePath,
 		Depth:      0,
 		State:      "closed",
 		IsLeaf:     nil,
-		Children:   make([]*ApiModels.UserFileTreeNode, 0),
+		Children:   make([]*api.UserFileTreeNode, 0),
 	}
 	// 建队，根节点入队
-	nodeMaps := make(map[string]*ApiModels.UserFileTreeNode)
-	//queue := make([]*ApiModels.UserFileTreeNode, 1)
+	nodeMaps := make(map[string]*api.UserFileTreeNode)
+	//queue := make([]*api.UserFileTreeNode, 1)
 	nodeMaps[root.UserFileId] = &root
-	//children := make([]*ApiModels.UserFileTreeNode, 0)
+	//children := make([]*api.UserFileTreeNode, 0)
 	// 存放节点文件路径
 	var filePath string
 	//curParentId := root.UserFileId
@@ -268,7 +268,7 @@ select * from temp;`, userId).Find(&dirs)
 			filePath = dirs[i].FilePath + "/" + dirs[i].FileName
 		}
 		// 孩子节点
-		child := ApiModels.UserFileTreeNode{
+		child := api.UserFileTreeNode{
 			ParentId:   dirs[i].ParentId,
 			UserFileId: dirs[i].UserFileId,
 			DirName:    dirs[i].FileName,
@@ -276,7 +276,7 @@ select * from temp;`, userId).Find(&dirs)
 			Depth:      0,
 			State:      "closed",
 			IsLeaf:     nil,
-			Children:   make([]*ApiModels.UserFileTreeNode, 0),
+			Children:   make([]*api.UserFileTreeNode, 0),
 		}
 		fmt.Printf("%v\n", child)
 		nodeMaps[dirs[i].UserFileId] = &child
@@ -286,7 +286,7 @@ select * from temp;`, userId).Find(&dirs)
 }
 
 // BuildFileTreeIn 输入用户id，根据广度优先结果建立文件树，并返回根节点，弃用
-func BuildFileTreeIn(userId string) (*ApiModels.UserFileTreeNode, error) {
+func BuildFileTreeIn(userId string) (*api.UserFileTreeNode, error) {
 	// 存放查询结果
 	var dirs []UserRepository
 	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
@@ -302,7 +302,7 @@ select * from temp;`, userId).Find(&dirs)
 		return nil, res.Error
 	}
 	// 递归mysql查询结果中，越上层的文件记录越靠前，且同一个父文件夹下的结果都会相邻
-	root := ApiModels.UserFileTreeNode{
+	root := api.UserFileTreeNode{
 		UserFileId: dirs[0].UserFileId,
 		DirName:    dirs[0].FileName,
 		FilePath:   dirs[0].FilePath,
@@ -311,12 +311,12 @@ select * from temp;`, userId).Find(&dirs)
 		IsLeaf:     nil,
 	}
 	// 建队，根节点入队
-	nodeMaps := make(map[string]*ApiModels.UserFileTreeNode)
-	//queue := make([]*ApiModels.UserFileTreeNode, 1)
+	nodeMaps := make(map[string]*api.UserFileTreeNode)
+	//queue := make([]*api.UserFileTreeNode, 1)
 	nodeMaps[root.UserFileId] = &root
 	// 设置为当前节点，创建孩子节点空列表
 
-	children := make([]*ApiModels.UserFileTreeNode, 0)
+	children := make([]*api.UserFileTreeNode, 0)
 	// 存放节点文件路径
 	var filePath string
 	curParentId := root.UserFileId
@@ -332,7 +332,7 @@ select * from temp;`, userId).Find(&dirs)
 				filePath = dirs[i].FilePath + "/" + dirs[i].FileName
 			}
 			// 孩子节点
-			child := ApiModels.UserFileTreeNode{
+			child := api.UserFileTreeNode{
 				UserFileId: dirs[i].UserFileId,
 				DirName:    dirs[i].FileName,
 				FilePath:   filePath,
@@ -354,7 +354,7 @@ select * from temp;`, userId).Find(&dirs)
 
 			curParentId = dirs[i].ParentId
 			// 重置孩子节点切片
-			children = make([]*ApiModels.UserFileTreeNode, 0)
+			children = make([]*api.UserFileTreeNode, 0)
 		}
 	}
 	nodeMaps[curParentId].Children = children
@@ -412,8 +412,8 @@ func FindParentDirFromAbsPath(db *gorm.DB, userId, absPath string) (*UserReposit
 // FindShareFilesByPath 从分享文件路径找到文件夹记录
 // input：分享文件路径filePath，分享文件shareBatchId
 // output：分享文件记录切片[]ShareRepository，文件数，err
-func FindShareFilesByPath(filePath, shareBatchId string) ([]ApiModels.GetShareFileListResp, error) {
-	var files []ApiModels.GetShareFileListResp
+func FindShareFilesByPath(filePath, shareBatchId string) ([]api.GetShareFileListResp, error) {
+	var files []api.GetShareFileListResp
 	err := DB.Where("share_batch_id = ? and share_file_path = ?", shareBatchId, filePath).Scan(&files).Error
 	if err != nil {
 		return nil, err
@@ -426,7 +426,7 @@ func FindShareFilesByPath(filePath, shareBatchId string) ([]ApiModels.GetShareFi
 // output: 生成的压缩文件在服务器的存储路径，error
 func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 	// 创建一个zip压缩批量文件，使用随机名称存放
-	zipUUID := utils.GenerateUUID()
+	zipUUID := common.GenerateUUID()
 	// todo:判断该随机名称文件是否存在
 	zipFilePath := "./repository/zip_file/" + zipUUID + ".zip"
 	zipFile, err := os.Create(zipFilePath)
@@ -442,7 +442,7 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 	// 循环所有用户文件记录
 	for _, userRepo := range userRepos {
 		// 找到当前文件的带路径记录 或 文件夹内所有文件的带路径记录
-		var userReposWithSavePath []middle_models.UserRepoWithSavePath
+		var userReposWithSavePath []UserRepoWithSavePath
 		userReposWithSavePath, err = FindUserReposWithSavePath(userRepo.UserId, userRepo.UserFileId, userRepo.IsDir)
 		if err != nil {
 			return "", err
@@ -520,8 +520,8 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 // FindUserReposWithSavePath 找到带文件存储地址的UserRepository
 // 情况1：当前输入的用户文件id对应是文件，那么返回该文件的UserRepoWithSavePath
 // 情况2：当前输入的用户文件id对应是文件夹，那么将返回该文件夹下所有文件（文件夹）的UserRepoWithSavePath切片
-func FindUserReposWithSavePath(userId, userFileId string, isDir uint8) ([]middle_models.UserRepoWithSavePath, error) {
-	var filesWithSavePath []middle_models.UserRepoWithSavePath
+func FindUserReposWithSavePath(userId, userFileId string, isDir uint8) ([]UserRepoWithSavePath, error) {
+	var filesWithSavePath []UserRepoWithSavePath
 	var res *gorm.DB
 	if isDir == 0 {
 		//  情况1：
@@ -559,7 +559,7 @@ func FindFolderFromAbsPath(tx *gorm.DB, userId, absPath string) (*UserRepository
 		return &file, nil
 	}
 	// 从绝对路径分离出文件夹名称及其父文件夹绝对路径
-	parentPath, folderName, err := utils.SplitAbsPath(absPath)
+	parentPath, folderName, err := filehandler.SplitAbsPath(absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -576,12 +576,12 @@ func FindFolderFromAbsPath(tx *gorm.DB, userId, absPath string) (*UserRepository
 // FindShareFilesByPathAndPage
 // 根据文件夹地址filePath、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindShareFilesByPathAndPage(userId string, req ApiModels.GetShareListReq) ([]ApiModels.GetShareListResp, int, error) {
+func FindShareFilesByPathAndPage(userId string, req api.GetShareListReq) ([]api.GetShareListResp, int, error) {
 	// filePath := req.ShareFilePath // 忽略filePath
 	count := req.PageCount
 	currentPage := req.CurrentPage
 
-	var files []ApiModels.GetShareListResp
+	var files []api.GetShareListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
 	err := DB.Table("share_basic as sb").Select("ur.*, sb.*").
 		Joins("LEFT JOIN share_repository AS sr ON sb.share_batch_id = sr.share_batch_id").
@@ -598,4 +598,18 @@ func FindShareFilesByPathAndPage(userId string, req ApiModels.GetShareListReq) (
 	} else {
 		return files[offset : offset+count], len(files), err
 	}
+}
+
+type UserRepoWithSavePath struct {
+	UserFileId string `json:"userFileId"`
+	FileId     string `json:"fileId"`
+	UserId     string `json:"userId"`
+	FilePath   string `json:"filePath"`
+	ParentId   string `json:"parentId"`
+	FileName   string `json:"fileName"`
+	ExtendName string `json:"extendName"`
+	FileType   uint8  `json:"fileType"`
+	IsDir      uint8  `json:"isDir"`
+	FileSize   uint64 `json:"fileSize"`
+	Path       string `json:"path"` // 文件的真实保存位置
 }

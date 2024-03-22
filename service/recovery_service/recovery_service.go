@@ -3,9 +3,9 @@ package recovery_service
 import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
-	ApiModels "netdisk_in_go/models/api_models"
-	"netdisk_in_go/utils"
 	"strings"
 )
 
@@ -23,13 +23,13 @@ func GetRecoveryFileList(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
-	var recoveryFiles []ApiModels.RecoveryListRespAPI
+	var recoveryFiles []api.RecoveryListRespAPI
 	res := models.DB.Model(models.RecoveryBasic{}).Where("user_id = ?", ub.UserId).Scan(&recoveryFiles)
 	if res.Error != nil {
-		utils.RespOK(writer, 99999, false, nil, "")
+		response.RespOK(writer, 99999, false, nil, "")
 		return
 	}
-	utils.RespOkWithDataList(writer, 0, recoveryFiles, len(recoveryFiles), "文件列表")
+	response.RespOkWithDataList(writer, 0, recoveryFiles, len(recoveryFiles), "文件列表")
 }
 
 // DelRecoveryFile
@@ -47,18 +47,18 @@ func DelRecoveryFile(c *gin.Context) {
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 
 	// 绑定post载荷的json格式参数
-	var r ApiModels.DelRecoveryReqAPI
+	var r api.DelRecoveryReqAPI
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
-		utils.RespBadReq(writer, "参数错误")
+		response.RespBadReq(writer, "参数错误")
 		return
 	}
 	if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, r.UserFileId).
 		Delete(&models.RecoveryBasic{}).Error; err != nil {
-		utils.RespOK(writer, 0, false, nil, "文件删除失败")
+		response.RespOK(writer, 0, false, nil, "文件删除失败")
 		return
 	}
-	utils.RespOkWithDataList(writer, 0, nil, 0, "删除成功")
+	response.RespOkWithDataList(writer, 0, nil, 0, "删除成功")
 }
 
 // DelRecoveryFilesInBatch
@@ -75,10 +75,10 @@ func DelRecoveryFilesInBatch(c *gin.Context) {
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 
-	var r ApiModels.DelRecoveryFilesInBatchReq
+	var r api.DelRecoveryFilesInBatchReq
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
-		utils.RespBadReq(writer, "参数错误")
+		response.RespBadReq(writer, "参数错误")
 		return
 	}
 	userFileIdList := strings.Split(r.UserFileIds, ",")
@@ -92,8 +92,8 @@ func DelRecoveryFilesInBatch(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
-		utils.RespOK(writer, 0, false, nil, "清空回收站失败")
+		response.RespOK(writer, 0, false, nil, "清空回收站失败")
 		return
 	}
-	utils.RespOkWithDataList(writer, 0, nil, 0, "清空回收站成功")
+	response.RespOkWithDataList(writer, 0, nil, 0, "清空回收站成功")
 }

@@ -34,7 +34,7 @@ import (
 //}
 //
 //func TestFind(t *testing.T) {
-//	utils.InitMySQL()
+//	common.InitMySQL()
 //	ub, isExist := models.FindUserByPhone(models.DB, "18927841103")
 //	if isExist {
 //		t.Fatal("?")
@@ -43,7 +43,7 @@ import (
 //}
 //
 //func TestDigui(t *testing.T) {
-//	utils.InitMySQL()
+//	common.InitMySQL()
 //	var ur []models.UserRepository
 //	res := models.DB.Raw(`with RECURSIVE temp as
 //(
