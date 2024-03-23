@@ -36,17 +36,17 @@ func (table UserRepository) TableName() string {
 	return "user_repository"
 }
 
-// FindFilesByPathAndPage
+// PageQueryFilesByPath
 // 根据文件夹地址filePath、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
+func PageQueryFilesByPath(filePath, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
 	var files []api.UserFileListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
 	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_path = ?", userId, filePath).Scan(&files).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	// 从所有符合条件的文件记录的offset处获取count条
+	// 从文件记录的offset处获取count条
 	offset := count * (currentPage - 1)
 	if offset+count+1 > uint(len(files)) {
 		// offset处获取count条大于文件总数量（例如最后一页的记录少于count条）
@@ -56,17 +56,17 @@ func FindFilesByPathAndPage(filePath, userId string, currentPage, count uint) ([
 	}
 }
 
-// FindFilesByTypeAndPage
+// PageQueryFilesByType
 // 根据文件夹类型fileType、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindFilesByTypeAndPage(fileType uint8, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
+func PageQueryFilesByType(fileType uint8, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
 	var files []api.UserFileListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
 	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_type = ?", userId, fileType).Scan(&files).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	// 从所有符合条件的文件记录的offset处获取count条
+	// 从文件记录的offset处获取count条
 	offset := count * (currentPage - 1)
 	if offset+count+1 > uint(len(files)) {
 		// offset处获取count条大于文件总数量（例如最后一页的记录少于count条）
@@ -113,16 +113,17 @@ func FindUserFileByIds(userId string, userFileIds []string) (*[]UserRepository, 
 	return &file, true
 }
 
-func FindRepFileByUserFileId(userId, userFileId string) (*RepositoryPool, bool) {
+// FindRepFileByUserFileId
+// 通过用户文件id，联表查询其中心存储池文件记录
+func FindRepFileByUserFileId(db *gorm.DB, userId, userFileId string) (*RepositoryPool, bool) {
 	var rp RepositoryPool
-	// 分页查询
-	rowsAffected := DB.Joins("JOIN user_repository ON repository_pool.file_id = user_repository.file_id").
+	// 联表查询
+	err := db.Joins("JOIN user_repository ON repository_pool.file_id = user_repository.file_id").
 		Where("user_repository.user_id = ? and user_repository.user_file_id = ?", userId, userFileId).
-		Find(&rp).RowsAffected
-	if rowsAffected == 0 { // 文件不存在
+		First(&rp).Error
+	if err != nil { // 文件不存在
 		return nil, false
 	}
-	// 文件存在或者出错
 	return &rp, true
 }
 
@@ -424,11 +425,12 @@ func FindShareFilesByPath(filePath, shareBatchId string) ([]api.GetShareFileList
 // GenZipFromUserRepos 根据用户文件记录的文件拓扑生成zip压缩文件，用于文件批量/文件夹下载
 // input: UserRepository切片
 // output: 生成的压缩文件在服务器的存储路径，error
-func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
+func GenZipFromUserRepos(reqUserRepos ...UserRepository) (string, error) {
 	// 创建一个zip压缩批量文件，使用随机名称存放
 	zipUUID := common.GenerateUUID()
-	// todo:判断该随机名称文件是否存在
 	zipFilePath := "./repository/zip_file/" + zipUUID + ".zip"
+
+	// 如果文件已存在，即UUID重复，Create会将文件清空
 	zipFile, err := os.Create(zipFilePath)
 	defer zipFile.Close()
 	if err != nil {
@@ -438,43 +440,53 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 	// 创建一个zip.Writer用于写入压缩文件
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
-	var fileFullPath string
-	// 循环所有用户文件记录
-	for _, userRepo := range userRepos {
-		// 找到当前文件的带路径记录 或 文件夹内所有文件的带路径记录
+
+	//var fileFullPath string
+
+	// 循环所有请求下载的用户文件记录（其中可能有文件或文件夹）
+	for _, reqUserRepo := range reqUserRepos {
 		var userReposWithSavePath []UserRepoWithSavePath
-		userReposWithSavePath, err = FindUserReposWithSavePath(userRepo.UserId, userRepo.UserFileId, userRepo.IsDir)
+		// UserRepoWithSavePath即带文件保存路径的user_repository
+		// 注意，如果是文件，len(userReposWithSavePath) = 1
+		// 如果是文件夹，len(userReposWithSavePath) >= 1
+		userReposWithSavePath, err = FindUserReposWithSavePath(reqUserRepo.UserId, reqUserRepo.UserFileId, reqUserRepo.IsDir)
 		if err != nil {
 			return "", err
 		}
-		// 获取当前文件（文件夹）的父级文件夹绝对路径及其长度，后续
-		// 而该文件在用户存储区的路径的前半段 - 这一段长度 = 文件在zip文件里的绝对路径
-		// 例如：文件路径：/123/456/789/1.txt，父文件夹：/123/456/789/，zip内文件绝对路径1.txt
-		var curParentAbsPath string
-		if userRepo.FilePath == "/" {
-			curParentAbsPath = "/"
-		} else {
-			curParentAbsPath = userRepo.FilePath + "/"
-		}
-		rootAbsPathLen := len(curParentAbsPath)
 
-		// 当前文件记录若是文件夹
+		// 随后，处理userReposWithSavePath中的所有文件路径
+		// 假设当前要下载的文件夹在用户存储区的绝对路径为 "/123/456/789"
+		// 那么下载的文件夹在zip文件中的绝对路径为"789"
+		// 该下载文件夹的第一层级内部文件则以"789"作为父文件夹，后续层级以此类推。
+		// 因此需要删除掉 【用户存储区的路径的前半段"/123/456/"】
+		// 【这个前半段】就是要下载的文件夹的父文件绝对路径"/123/456" + "/"
+		// 一个特殊情况是，当下载的文件在根目录下时，"/123"，只需要删除前半段的"/"即可
+
+		var deleteLen int // 要删除的前半段路径长度
+		if reqUserRepo.FilePath == "/" {
+			// 特殊情况，下载文件在根目录
+			deleteLen = 1
+		} else {
+			// 一般情况，下载的文件不在根目录，reqUserRepo.FilePath + "/"
+			deleteLen = len(reqUserRepo.FilePath) + 1
+		}
+
 		for _, userRepoWithPath := range userReposWithSavePath {
-			// 根据下载是否是文件夹分两种情况
-			// case 1：是文件夹，则在zip根据路径创建文件夹即可
+			// 循环所有要下载的文件
 			if userRepoWithPath.IsDir == 1 {
-				if userRepoWithPath.FilePath == "/" {
-					fileFullPath = "/" + userRepoWithPath.FileName + "/" // "/123/
-				} else {
-					fileFullPath = userRepoWithPath.FilePath + "/" + userRepoWithPath.FileName + "/"
-				}
-				folderPathInZip := fileFullPath[rootAbsPathLen:] // 去除前面的根目录长度
-				// 往zip里创建文件夹
+				// case 1：下载的文件是文件夹
+				// 拼接用户文件记录中的文件路径+文件名
+				fileFullPath := filehandler.ConCatFileFullPath(userRepoWithPath.FilePath, userRepoWithPath.FileName)
+				// zip格式中，以"/"结尾表示文件夹
+				fileFullPath += "/"
+				// 得到存放到zip文件的路径
+				folderPathInZip := fileFullPath[deleteLen:] // 去除前面的根目录长度
 				// zipWriter.Create创建文件的规则
 				// "123/" 根目录创建123文件夹
 				// "123/456" 在文件夹123创建456文件
 				// "123/456/" 在文件夹123创建456文件夹
 				_, err := zipWriter.Create(folderPathInZip)
+				// 不需要写入文件，创建文件夹即可
 				if err != nil {
 					return "", err
 				}
@@ -492,17 +504,11 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 			if err != nil {
 				return "", err
 			}
-
-			// 先获取文件完整路径（包括文件名称）
-			if userRepoWithPath.FilePath == "/" {
-				fileFullPath = "/" + userRepoWithPath.FileName + "." + userRepoWithPath.ExtendName // "/123/
-			} else {
-				fileFullPath = userRepoWithPath.FilePath + "/" + userRepoWithPath.FileName + "." + userRepoWithPath.ExtendName
-			}
+			// 拼接用户文件记录中的文件路径+文件名+拓展名
+			fileFullPath := filehandler.ConCatFileFullPath(userRepoWithPath.FilePath, userRepoWithPath.FileName+"."+userRepoWithPath.ExtendName)
 			// 去掉根目录路径长度，就是存放到zip中的文件路径
-			filePathInZip := fileFullPath[rootAbsPathLen:] // 去除前面的根目录长度
-
-			// 根据该路径写入文件
+			filePathInZip := fileFullPath[deleteLen:]
+			// 根据该路径写入zip文件
 			fileInZipWriter, err := zipWriter.Create(filePathInZip)
 			if err != nil {
 				return "", err
@@ -511,9 +517,10 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			file.Close()
+			file.Close() // 每次循环都要关闭文件
 		}
 	}
+	// todo: 理论上可以直接返回
 	return zipFilePath, nil
 }
 
@@ -521,15 +528,13 @@ func GenZipFromUserRepos(userRepos ...UserRepository) (string, error) {
 // 情况1：当前输入的用户文件id对应是文件，那么返回该文件的UserRepoWithSavePath
 // 情况2：当前输入的用户文件id对应是文件夹，那么将返回该文件夹下所有文件（文件夹）的UserRepoWithSavePath切片
 func FindUserReposWithSavePath(userId, userFileId string, isDir uint8) ([]UserRepoWithSavePath, error) {
-	var filesWithSavePath []UserRepoWithSavePath
+	var userReposWithSavePath []UserRepoWithSavePath
 	var res *gorm.DB
-	if isDir == 0 {
-		//  情况1：
+	if isDir == 0 { //  情况1：当前文件为非文件夹，直接联表查询该文件记录（附带其存储地址）
 		res = DB.Raw(`SELECT * FROM user_repository AS ur JOIN repository_pool AS rp ON rp.file_id = ur.file_id 
 WHERE ur.user_file_id= ? AND ur.user_id = ? `,
-			userFileId, userId).Find(&filesWithSavePath)
-	} else {
-		//  情况2:
+			userFileId, userId).Find(&userReposWithSavePath)
+	} else { //  情况2: 当前文件为文件夹，使用递归查询
 		res = DB.Raw(
 			`SELECT recur.*, rp.path FROM(with RECURSIVE temp as
 (
@@ -539,12 +544,13 @@ SELECT ur.* FROM user_repository
 AS ur,temp t 
 WHERE ur.parent_id=t.user_file_id AND ur.user_id = ? AND ur.deleted_at is NULL 
 )SELECT * FROM temp) AS recur LEFT JOIN repository_pool AS rp ON rp.file_id = recur.file_id`,
-			userFileId, userId, userId).Find(&filesWithSavePath)
+			userFileId, userId, userId).Find(&userReposWithSavePath)
 	}
-	if res.Error != nil {
+	if res.Error != nil || res.RowsAffected == 0 {
+		// 出错或没有找到记录
 		return nil, res.Error
 	}
-	return filesWithSavePath, nil
+	return userReposWithSavePath, nil
 }
 
 // FindFolderFromAbsPath 根据文件夹绝对路径查询记录

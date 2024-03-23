@@ -170,7 +170,7 @@ func OfficeFilePreview(c *gin.Context) {
 	// 处理请求参数
 
 	// 获取文件
-	rp, isExist := models.FindRepFileByUserFileId(ub.UserId, userFileId)
+	rp, isExist := models.FindRepFileByUserFileId(models.DB, ub.UserId, userFileId)
 	if !isExist {
 		response.RespOK(writer, 0, true, office_models.OfficeError{Error: 1}, "文件不存在")
 		return

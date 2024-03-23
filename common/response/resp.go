@@ -35,8 +35,8 @@ func RespOK(w http.ResponseWriter, code int, success bool, data interface{}, msg
 	}
 }
 
-func RespOKFail(w http.ResponseWriter, code int, data interface{}, msg string) {
-	RespOK(w, code, false, data, msg)
+func RespOKFail(w http.ResponseWriter, code int, msg string) {
+	RespOK(w, code, false, nil, msg)
 }
 
 func RespOKSuccess(w http.ResponseWriter, code int, data interface{}, msg string) {

@@ -31,7 +31,7 @@ func RenameFile(c *gin.Context) {
 	}
 	// 校验文件名称
 	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"") {
-		response.RespOKFail(writer, response.FileNameNotValid, nil, "命名失败，文件名称出现非法字符")
+		response.RespOKFail(writer, response.FileNameNotValid, "命名失败，文件名称出现非法字符")
 		return
 	}
 	// 更新文件名
@@ -42,15 +42,15 @@ func RenameFile(c *gin.Context) {
 	if models.IsDuplicateEntryErr(res.Error) {
 		// 由于user_repository表中设置了UNIQUE INDEX `user_id`(`user_id`, `parent_id`, `file_name`, `extend_name`, `file_type`)
 		// 因此文件记录的上述字段重复时会触发Error 1062 (23000): Duplicate entry
-		response.RespOKFail(writer, response.FileNameNotValid, nil, "文件名重复")
+		response.RespOKFail(writer, response.FileNameNotValid, "文件名重复")
 		return
 	} else if res.RowsAffected == 0 {
 		// 没有出现重复，update也没有影响行数
-		response.RespOKFail(writer, response.FileNotExist, nil, "文件不存在")
+		response.RespOKFail(writer, response.FileNotExist, "文件不存在")
 		return
 	}
 	if err != nil {
-		response.RespOKFail(writer, response.DatabaseError, nil, "数据库出错")
+		response.RespOKFail(writer, response.DatabaseError, "数据库出错")
 		return
 	}
 	response.RespOKSuccess(writer, 0, nil, "文件名修改成功")

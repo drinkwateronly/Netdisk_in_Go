@@ -57,6 +57,28 @@ type UserFileTreeNode struct {
 	Children   []*UserFileTreeNode `json:"children"`
 }
 
+// ----------------------------------------------------------------
+
+// FileDownloadReq 单个文件下载请求
+type FileDownloadReq struct {
+	UserFileId string `form:"userFileId"` // 单个下载文件的用户文件标识符
+}
+
+// FileDownloadInBatchReq 文件批量下载请求
+type FileDownloadInBatchReq struct {
+	UserFileIds string `form:"userFileIds"` // 多个下载文件的用户文件标识符，以逗号分割
+}
+
+// FilePreviewReq 文件在线预览请求
+type FilePreviewReq struct {
+	UserFileId     string `form:"userFileId"`     // 用户文件标识符
+	IsMin          bool   `form:"isMin"`          // 是否是以最低质量预览
+	ShareBatchNum  string `form:"shareBatchNum"`  // 未使用
+	ExtractionCode string `form:"extractionCode"` // 未使用
+}
+
+// ----------------------------------------------------------------
+
 // CreateFileReqAPI 创建文件请求API
 type CreateFileReqAPI struct {
 	FileName   string `json:"fileName"`

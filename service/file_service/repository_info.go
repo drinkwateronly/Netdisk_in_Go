@@ -33,8 +33,8 @@ func GetUserStorage(c *gin.Context) {
 // @Router /file/getfilelist [GET]
 func GetUserFileList(c *gin.Context) {
 	writer := c.Writer
-	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
+
 	// 绑定请求参数
 	var req api.UserFileListReq
 	err := c.ShouldBindQuery(&req)
@@ -42,21 +42,23 @@ func GetUserFileList(c *gin.Context) {
 		response.RespBadReq(writer, "请求参数不正确")
 		return
 	}
+
 	// 查询文件记录
 	var files []api.UserFileListResp
-	var filesTotalCount int
+	// totalCount用于前端展示所有文件数量，而不是本次分页查询得到的文件数量
+	var totalCount int
 	if req.FileType == 0 {
 		// 不选择文件类型时，按文件路径查找
-		files, filesTotalCount, err = models.FindFilesByPathAndPage(req.FilePath, ub.UserId, req.CurrentPage, req.PageCount)
+		files, totalCount, err = models.PageQueryFilesByPath(req.FilePath, ub.UserId, req.CurrentPage, req.PageCount)
 	} else {
 		// 选择文件类型时，忽略文件路径
-		files, filesTotalCount, err = models.FindFilesByTypeAndPage(req.FileType, ub.UserId, req.CurrentPage, req.PageCount)
+		files, totalCount, err = models.PageQueryFilesByType(req.FileType, ub.UserId, req.CurrentPage, req.PageCount)
 	}
 	if err != nil {
 		response.RespOK(writer, response.DATABASEERROR, false, nil, err.Error())
 		return
 	}
-	response.RespOkWithDataList(writer, response.Success, files, filesTotalCount, "文件列表")
+	response.RespOkWithDataList(writer, response.Success, files, totalCount, "文件列表")
 }
 
 // GetFileTree

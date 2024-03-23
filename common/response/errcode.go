@@ -16,6 +16,10 @@ var (
 	FileRecordNotExist = 20003
 	FileNameNotValid   = 20009
 
+	FileIOError      = 30001
+	SaveFileNotExist = 30002
+	GenZipError      = 30003
+
 	FILECREATEERROR    = 50000
 	FILESAVEERROR      = 50001
 	FILETYPENOTSUPPORT = 50002

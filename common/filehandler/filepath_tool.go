@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// ConCatFileFullPath 根据记录中的文件路径（其父文件夹的绝对路径）与文件名拼接成文件完整路径（绝对路径）
+// example：
+// - "/123/456" + "789" ->  "/123/456/789"
+// - "/123/456" + "789.txt" ->  "/123/456/789.txt"
+// - "/" + "789.txt" ->  "/789.txt"
 func ConCatFileFullPath(filePath, fileName string) string {
 	if filePath == "/" {
 		return "/" + fileName
