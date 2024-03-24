@@ -38,20 +38,18 @@ func FileUploadPrepare(c *gin.Context) {
 		}
 
 		// 判断文件夹是否存在
-		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, req.FilePath)
+		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
 		if err != nil {
 			return errors.New("文件夹不存在")
 		}
 
 		// 判断文件在当前文件夹是否重名
-		if _, isExist, err = models.FindFileByNameAndPath(tx, ub.UserId,
+		_, isExist, err := models.FindFileByNameAndPath(tx, ub.UserId,
 			processedFileInfo.AbsPath,
 			processedFileInfo.FileName,
-			processedFileInfo.ExtendName); isExist {
-			return errors.New("文件在当前文件夹已存在")
-		}
+			processedFileInfo.ExtendName)
 		if err != nil {
-			return errors.New("文件夹不存在")
+			return errors.New("文件在当前文件夹已存在")
 		}
 		// 如果文件大小为0，则上传文件
 		if req.TotalSize == 0 {
@@ -70,7 +68,7 @@ func FileUploadPrepare(c *gin.Context) {
 		// 		2.存放文件的文件夹存在，直接创建文件记录
 
 		// 查存储文件的文件夹是否存在
-		parentDir, isExist, err = models.FindParentDirFromAbsPath(tx, ub.UserId, processedFileInfo.AbsPath)
+		parentDir, err = models.FindParentDirFromFilePath(tx, ub.UserId, processedFileInfo.AbsPath)
 		if err != nil {
 			return errors.New("文件夹不存在")
 		}
@@ -81,7 +79,7 @@ func FileUploadPrepare(c *gin.Context) {
 		// 例在/123目录上传456/789/0.txt，接下来的步骤将在文件夹123按顺序创建文件夹456和789
 		if !isExist {
 			// 找到/123的文件id
-			uploadRoot, _, err := models.FindParentDirFromAbsPath(tx, ub.UserId, curPath)
+			uploadRoot, err := models.FindParentDirFromFilePath(tx, ub.UserId, curPath)
 			if err != nil {
 				return err
 			}
@@ -223,7 +221,7 @@ func FileUpload(c *gin.Context) {
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 
 		// 判断父文件夹是否存在
-		//parentDir, _, err := models.FindParentDirFromAbsPath(tx, ub.UserId, req.FilePath)
+		//parentDir, _, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
 		//if err != nil {
 		//	return errors.New("文件夹不存在")
 		//}
@@ -241,7 +239,7 @@ func FileUpload(c *gin.Context) {
 		// 根据绝对路径 判断文件的父文件夹是否存在
 		fmt.Println("processedFileInfo.AbsPath", processedFileInfo.AbsPath)
 
-		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, processedFileInfo.AbsPath)
+		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, processedFileInfo.AbsPath)
 		if err != nil {
 			return err
 		}
@@ -250,9 +248,10 @@ func FileUpload(c *gin.Context) {
 		curPath := req.FilePath // 当前路径就是文件上传时候的根路径
 		// if成立时，存放上传文件的文件夹不存在，这种情况常见于整个文件夹的上传时存在相对路径
 		// 例在/123目录上传456/789/0.txt，接下来的步骤将在文件夹123按顺序创建文件夹456和789
-		if !isExist {
+		// isExist原来是
+		if err != nil {
 			// 找到/123的文件id
-			uploadRoot, _, err := models.FindParentDirFromAbsPath(tx, ub.UserId, curPath)
+			uploadRoot, err := models.FindParentDirFromFilePath(tx, ub.UserId, curPath)
 			if err != nil {
 				return err
 			}

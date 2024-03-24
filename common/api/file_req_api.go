@@ -79,27 +79,32 @@ type FilePreviewReq struct {
 
 // ----------------------------------------------------------------
 
+// DeleteFileReq 文件批量删除请求
 type DeleteFileReq struct {
 	UserFileId string `json:"userFileId"` // 要删除文件的用户文件标识符
 }
 
+// DeleteFileInBatchReq 文件批量删除请求
 type DeleteFileInBatchReq struct {
 	UserFileIds string `json:"userFileIds"` // 要批量删除的文件的用户文件标识符，以逗号隔开
 }
 
 // ----------------------------------------------------------------
 
-// CreateFileReqAPI 创建文件请求API
-type CreateFileReqAPI struct {
-	FileName   string `json:"fileName"`
-	FilePath   string `json:"filePath"`
-	ExtendName string `json:"extendName"`
+// CreateFileReq 创建文件请求API
+type CreateFileReq struct {
+	FilePath   string `json:"filePath"`   // 文件路径
+	FileName   string `json:"fileName"`   // 文件名
+	ExtendName string `json:"extendName"` // 扩展名
 }
 
-type CreateFolderRequest struct {
-	FolderName string `json:"fileName"`
-	FolderPath string `json:"filePath"`
+// CreateFolderReq 创建文件夹请求API
+type CreateFolderReq struct {
+	FolderName string `json:"fileName"` // 文件路径
+	FolderPath string `json:"filePath"` // 文件名
 }
+
+// ----------------------------------------------------------------
 
 // FileUploadReqAPI
 // Create or update API information request | 创建或更新API信息

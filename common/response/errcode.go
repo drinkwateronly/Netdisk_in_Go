@@ -9,8 +9,8 @@ var (
 	CookieGenError = 10003
 	CookieNotValid = 10004
 
-	PARENTNOTEXIST = 20000 //
-	FILEREPEAT     = 20001
+	ParentNotExist = 20000 //
+	FileRepeat     = 20001
 	FileNotExist   = 20002
 
 	FileRecordNotExist = 20003
@@ -21,7 +21,7 @@ var (
 	GenZipError      = 30003
 
 	FILECREATEERROR    = 50000
-	FILESAVEERROR      = 50001
+	FileSaveError      = 50001
 	FILETYPENOTSUPPORT = 50002
 
 	ShareExpired           = 60000

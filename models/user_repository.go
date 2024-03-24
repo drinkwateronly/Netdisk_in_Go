@@ -277,28 +277,28 @@ func GetUserAllFiles(userId string) ([]*UserRepository, error) {
 	return userFiles, nil
 }
 
-// FindParentDirFromAbsPath 从绝对路径找到父文件夹记录
-// input：存放文件的文件夹的绝对路径，例如/123或者/123/456/789 或者/
+// FindParentDirFromFilePath 从文件路径找到父文件夹记录
+// input：存放文件的文件夹的文件路径，例如/123或者/123/456/789 或者/
 // output：文件夹记录，isExist，error
-func FindParentDirFromAbsPath(db *gorm.DB, userId, absPath string) (*UserRepository, bool, error) {
+func FindParentDirFromFilePath(db *gorm.DB, userId, filePath string) (*UserRepository, error) {
 	var ur UserRepository
 	var err error
 	var res *gorm.DB
-	if absPath == "/" {
-		res = db.Where("user_id = ? AND file_name = '/'", userId).Find(&ur)
+	if filePath == "/" {
+		res = db.Where("user_id = ? AND file_name = '/'", userId).First(&ur)
 	} else {
-		list := strings.Split(absPath[1:], "/")                   //  "/123/456/789" -> ["123","456","789"]
-		folderName := list[len(list)-1]                           // ["123","456","789"] -> "456"
-		folderPath := absPath[0 : len(absPath)-len(folderName)-1] // "/123/456/789"  -> "/123/456"
+		list := strings.Split(filePath[1:], "/")                    //  "/123/456/789" -> ["123","456","789"]
+		folderName := list[len(list)-1]                             // ["123","456","789"] -> "456"
+		folderPath := filePath[0 : len(filePath)-len(folderName)-1] // "/123/456/789"  -> "/123/456"
 		if folderPath == "" {
 			folderPath = "/"
 		}
-		res = db.Where("user_id = ? AND file_path = ? AND file_name = ? AND is_dir='1'", userId, folderPath, folderName).Find(&ur)
+		res = db.Where("user_id = ? AND file_path = ? AND file_name = ? AND is_dir='1'", userId, folderPath, folderName).First(&ur)
 	}
-	if res.Error != nil || res.RowsAffected == 0 {
-		return nil, false, err
+	if res.Error != nil {
+		return nil, err
 	}
-	return &ur, true, nil
+	return &ur, nil
 }
 
 // GenZipFromUserRepos 根据用户文件记录的文件拓扑生成zip压缩文件，用于文件批量/文件夹下载

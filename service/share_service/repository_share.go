@@ -289,14 +289,11 @@ func SaveShareFile(c *gin.Context) {
 
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		// 查询父文件夹是否存在
-		parentDir, isExist, err := models.FindParentDirFromAbsPath(tx, ub.UserId, req.FilePath)
+		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
 		if err != nil {
 			return err
 		}
-		if !isExist {
-			return errors.New("file not found")
-		}
-
+	
 		// 获得所有的分享文件的id
 		userFileIds := strings.Split(req.UserFileIds, ",")
 		if len(userFileIds) <= 0 {
