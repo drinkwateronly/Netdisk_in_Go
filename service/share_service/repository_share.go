@@ -45,7 +45,7 @@ func FilesShare(c *gin.Context) {
 	shareFileIds := strings.Split(req.UserFileIds, ",") // 所有分享的用户文件id
 
 	// 获取分享的用户文件记录
-	userRps, isExist := models.FindUserFileByIds(ub.UserId, shareFileIds)
+	userRps, isExist := models.FindUserFilesByIds(models.DB, ub.UserId, shareFileIds)
 	if !isExist {
 		response.RespOK(writer, 9999, false, nil, "文件缺失")
 		return
@@ -101,7 +101,7 @@ func FilesShare(c *gin.Context) {
 
 		// 版本2：sql递归，递归结束处理分享文件路径
 		var shareRps []models.ShareRepository
-		for _, userRp := range *userRps {
+		for _, userRp := range userRps {
 			if userRp.IsDir == 0 {
 				// 不是文件夹，文件则直接放到分享文件根目录中
 				shareRps = append(shareRps, models.ShareRepository{

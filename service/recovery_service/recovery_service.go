@@ -24,7 +24,7 @@ func GetRecoveryFileList(c *gin.Context) {
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 	var recoveryFiles []api.RecoveryListRespAPI
-	res := models.DB.Model(models.RecoveryBasic{}).Where("user_id = ?", ub.UserId).Scan(&recoveryFiles)
+	res := models.DB.Model(models.RecoveryBatch{}).Where("user_id = ?", ub.UserId).Scan(&recoveryFiles)
 	if res.Error != nil {
 		response.RespOK(writer, 99999, false, nil, "")
 		return
@@ -54,7 +54,7 @@ func DelRecoveryFile(c *gin.Context) {
 		return
 	}
 	if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, r.UserFileId).
-		Delete(&models.RecoveryBasic{}).Error; err != nil {
+		Delete(&models.RecoveryBatch{}).Error; err != nil {
 		response.RespOK(writer, 0, false, nil, "文件删除失败")
 		return
 	}
@@ -72,9 +72,9 @@ func DelRecoveryFile(c *gin.Context) {
 // @Router /recoveryfile/deleterecoveryfile [POST]
 func DelRecoveryFilesInBatch(c *gin.Context) {
 	writer := c.Writer
-	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
 
+	// 解析请求参数
 	var r api.DelRecoveryFilesInBatchReq
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
@@ -85,7 +85,7 @@ func DelRecoveryFilesInBatch(c *gin.Context) {
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		for _, userFileId := range userFileIdList {
 			if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, userFileId).
-				Delete(&models.RecoveryBasic{}).Error; err != nil {
+				Delete(&models.RecoveryBatch{}).Error; err != nil {
 				return err
 			}
 		}

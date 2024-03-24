@@ -79,6 +79,16 @@ type FilePreviewReq struct {
 
 // ----------------------------------------------------------------
 
+type DeleteFileReq struct {
+	UserFileId string `json:"userFileId"` // 要删除文件的用户文件标识符
+}
+
+type DeleteFileInBatchReq struct {
+	UserFileIds string `json:"userFileIds"` // 要批量删除的文件的用户文件标识符，以逗号隔开
+}
+
+// ----------------------------------------------------------------
+
 // CreateFileReqAPI 创建文件请求API
 type CreateFileReqAPI struct {
 	FileName   string `json:"fileName"`

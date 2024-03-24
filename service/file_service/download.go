@@ -52,7 +52,7 @@ func FileDownload(c *gin.Context) {
 		savePath = rp.Path
 	} else { // 情况2：下载文件是文件夹，需要找到文件夹内部所有文件，并按照相对位置存放并压缩。
 		// 根据请求的文件夹记录，生成zip文件，并返回该文件存储在服务器的路径
-		savePath, err = models.GenZipFromUserRepos(*ur)
+		savePath, err = models.GenZipFromUserRepos(ur)
 		if err != nil {
 			response.RespOK(writer, response.GenZipError, false, nil, "创建zip文件失败")
 			return
@@ -117,10 +117,10 @@ func FileDownloadInBatch(c *gin.Context) {
 	}
 
 	// 找到根据文件id找到用户文件记录
-	userRepos, _ := models.FindUserFileByIds(ub.UserId, userFileIds)
+	userRepos, _ := models.FindUserFilesByIds(models.DB, ub.UserId, userFileIds)
 
 	// 根据用户文件记录生成zip压缩文件（核心功能）
-	zipFilePath, err := models.GenZipFromUserRepos(*userRepos...)
+	zipFilePath, err := models.GenZipFromUserRepos(userRepos...)
 	if err != nil {
 		return
 	}

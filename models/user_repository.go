@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"gorm.io/plugin/soft_delete"
 	"io"
 	"netdisk_in_go/common"
 	"netdisk_in_go/common/api"
@@ -29,7 +29,11 @@ type UserRepository struct {
 	ModifyTime    string `json:"modifyTime"`
 	UploadTime    string `json:"uploadTime"`
 	DeleteBatchId string `json:"deleteBatchNum"`
-	gorm.Model
+
+	// gorm.Model
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt soft_delete.DeletedAt
 }
 
 func (table UserRepository) TableName() string {
@@ -100,17 +104,16 @@ func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, 
 	return &file, true
 }
 
-func FindUserFileByIds(userId string, userFileIds []string) (*[]UserRepository, bool) {
-	var file []UserRepository
+func FindUserFilesByIds(tx *gorm.DB, userId string, userFileIds []string) ([]*UserRepository, bool) {
+	var file []*UserRepository
 	// 分页查询
-	rowsAffected := DB.
-		Where("user_id = ? and user_file_id in ?", userId, userFileIds).
+	rowsAffected := tx.Where("user_id = ? and user_file_id in ?", userId, userFileIds).
 		Find(&file).RowsAffected
 	if rowsAffected != int64(len(userFileIds)) { // 文件不存在
 		return nil, false
 	}
 	// 文件存在或者出错
-	return &file, true
+	return file, true
 }
 
 // FindRepFileByUserFileId
@@ -125,103 +128,6 @@ func FindRepFileByUserFileId(db *gorm.DB, userId, userFileId string) (*Repositor
 		return nil, false
 	}
 	return &rp, true
-}
-
-func FindFilesByUserFileIds(userId string, userFileIds []string) ([]RepositoryPool, bool) {
-	var rp []RepositoryPool
-
-	rowsAffected := DB.Joins("JOIN user_repository ON repository_pool.file_id = user_repository.file_id").
-		Where("user_repository.user_id = ? and user_repository.user_file_id in ?", userId, userFileIds).
-		Find(&rp).RowsAffected
-	if rowsAffected != int64(len(userFileIds)) { // 文件不存在
-		return nil, false
-	}
-	// 文件存在或者出错
-	return rp, true
-}
-
-// DelAllFilesFromDir 根据用户的id，文件夹所在的文件夹路径，文件夹名称，递归删除文件夹内的所有文件
-func DelAllFilesFromDir(delBatchId, userId, parentPath, dirName string) error {
-	var directoryPath string // 文件夹路径
-	// todo: 递归sql
-	// 拼接出这个文件夹的路径
-	if parentPath == "/" {
-		directoryPath = parentPath + dirName
-	} else {
-		directoryPath = parentPath + "/" + dirName
-	}
-	// 找到这个文件夹下的所有子文件，加排他锁
-	var files []UserRepository
-	err := DB.Clauses(
-		clause.Locking{
-			Strength: "UPDATE",
-		},
-	).
-		Where("user_id = ? AND file_path = ?", userId, directoryPath).Find(&files).Error
-	if err != nil {
-		return err
-	}
-	//
-	userFileIds := make([]string, len(files))
-	// 遍历所有子文件夹
-	for i, file := range files {
-		// 如果该文件是子文件夹，则进入该子文件夹删除文件
-		if file.FileType == filehandler.DIRECTORY {
-			err = DelAllFilesFromDir(delBatchId, userId, file.FilePath, file.FileName)
-			if err != nil {
-				return err
-			}
-		}
-		// 记录该文件夹下的文件id
-		userFileIds[i] = file.UserFileId
-	}
-	// 开始删除该文件夹下的所有文件
-	err = SoftDelUserFiles(delBatchId, userId, userFileIds...)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetFileTreeFromDIrV1(tx *gorm.DB, userId, userFileId, parentPath, dirName string) (*api.UserFileTreeNode, error) {
-	var directoryPath string // 文件夹路径
-	// todo: 递归sql
-	// 拼接出这个文件夹的路径
-	if parentPath == "/" {
-		directoryPath = parentPath + dirName
-	} else if parentPath == "" {
-		directoryPath = "/"
-	} else {
-		directoryPath = parentPath + "/" + dirName
-	}
-	// 找到这个文件夹下的所有子文件夹，加排他锁
-	node := api.UserFileTreeNode{
-		UserFileId: userFileId,
-		DirName:    dirName,
-		FilePath:   directoryPath,
-		Depth:      0,
-		State:      "closed",
-		IsLeaf:     nil,
-	}
-	var files []UserRepository
-	err := DB.Clauses(clause.Locking{Strength: "UPDATE"}).Table("(?) as user_repository", tx).
-		Where("user_repository.user_id = ? AND user_repository.file_path = ? AND user_repository.is_dir = 1", userId, directoryPath).Find(&files).Error
-	if err != nil {
-		return nil, err
-	}
-
-	children := make([]*api.UserFileTreeNode, len(files))
-	// 遍历所有子文件夹
-	for i, file := range files {
-		// 如果该文件是子文件夹，则进入该子文件夹删除文件
-		child, err := GetFileTreeFromDIrV1(tx, userId, file.UserFileId, file.FilePath, file.FileName)
-		if err != nil {
-			return nil, err
-		}
-		children[i] = child
-	}
-	node.Children = children
-	return &node, nil
 }
 
 // BuildFileTree 输入用户id，根据广度优先结果建立文件树，并返回根节点
@@ -362,21 +268,6 @@ select * from temp;`, userId).Find(&dirs)
 	return &root, nil
 }
 
-// SoftDelUserFiles 根据userId, userFileId，将单个/多个用户文件记录软删除，并为记录设置delBatchId
-func SoftDelUserFiles(delBatchId, userId string, userFileIds ...string) error {
-	err := DB.Where("user_id = ? and user_file_id in ?", userId, userFileIds).
-		Updates(&UserRepository{
-			Model: gorm.Model{ // 软删除
-				DeletedAt: gorm.DeletedAt{
-					Time:  time.Now(),
-					Valid: true,
-				},
-			},
-			DeleteBatchId: delBatchId, // 设置delBatchId
-		}).Error
-	return err
-}
-
 // GetUserAllFiles 查询用户的全部文件
 func GetUserAllFiles(userId string) ([]*UserRepository, error) {
 	var userFiles []*UserRepository
@@ -410,22 +301,10 @@ func FindParentDirFromAbsPath(db *gorm.DB, userId, absPath string) (*UserReposit
 	return &ur, true, nil
 }
 
-// FindShareFilesByPath 从分享文件路径找到文件夹记录
-// input：分享文件路径filePath，分享文件shareBatchId
-// output：分享文件记录切片[]ShareRepository，文件数，err
-func FindShareFilesByPath(filePath, shareBatchId string) ([]api.GetShareFileListResp, error) {
-	var files []api.GetShareFileListResp
-	err := DB.Where("share_batch_id = ? and share_file_path = ?", shareBatchId, filePath).Scan(&files).Error
-	if err != nil {
-		return nil, err
-	}
-	return files, err
-}
-
 // GenZipFromUserRepos 根据用户文件记录的文件拓扑生成zip压缩文件，用于文件批量/文件夹下载
 // input: UserRepository切片
 // output: 生成的压缩文件在服务器的存储路径，error
-func GenZipFromUserRepos(reqUserRepos ...UserRepository) (string, error) {
+func GenZipFromUserRepos(reqUserRepos ...*UserRepository) (string, error) {
 	// 创建一个zip压缩批量文件，使用随机名称存放
 	zipUUID := common.GenerateUUID()
 	zipFilePath := "./repository/zip_file/" + zipUUID + ".zip"
@@ -582,29 +461,6 @@ func FindFolderFromAbsPath(tx *gorm.DB, userId, absPath string) (*UserRepository
 // FindShareFilesByPathAndPage
 // 根据文件夹地址filePath、当前页currentPage（从0开始）、每页记录数量count、
 // 返回分页查询的文件记录列表，并返回总记录条数（前端需要展示总的文件数量）
-func FindShareFilesByPathAndPage(userId string, req api.GetShareListReq) ([]api.GetShareListResp, int, error) {
-	// filePath := req.ShareFilePath // 忽略filePath
-	count := req.PageCount
-	currentPage := req.CurrentPage
-
-	var files []api.GetShareListResp
-	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
-	err := DB.Table("share_basic as sb").Select("ur.*, sb.*").
-		Joins("LEFT JOIN share_repository AS sr ON sb.share_batch_id = sr.share_batch_id").
-		Joins("LEFT JOIN user_repository AS ur ON sr.user_file_id = ur.user_file_id").
-		Where("ur.user_id = ? AND sr.share_file_path = '/'", userId).Scan(&files).Error
-	if err != nil {
-		return nil, 0, err
-	}
-	// 从所有符合条件的文件记录的offset处获取count条
-	offset := count * (currentPage - 1)
-	if offset+count+1 > uint(len(files)) {
-		// offset处获取count条大于文件总数量（例如最后一页的记录少于count条）
-		return files[offset:], len(files), err
-	} else {
-		return files[offset : offset+count], len(files), err
-	}
-}
 
 type UserRepoWithSavePath struct {
 	UserFileId string `json:"userFileId"`
@@ -618,4 +474,22 @@ type UserRepoWithSavePath struct {
 	IsDir      uint8  `json:"isDir"`
 	FileSize   uint64 `json:"fileSize"`
 	Path       string `json:"path"` // 文件的真实保存位置
+}
+
+// FindAllFilesFromFileId 找到某个文件夹 及 其包含的所有文件 的记录
+func FindAllFilesFromFileId(tx *gorm.DB, userId, dirId string) ([]*UserRepository, error) {
+	var dirs []*UserRepository
+	// 只需要在递归的初始条件限定user_id即可
+	err := tx.Raw(`with RECURSIVE temp as
+(
+    SELECT * from user_repository where user_file_id= ? AND user_id = ?
+    UNION ALL
+    SELECT ur.* from user_repository as ur,temp t 
+	where ur.parent_id=t.user_file_id AND ur.deleted_at = 0
+)
+select * from temp;`, dirId, userId).Find(&dirs).Error
+	if err != nil {
+		return nil, err
+	}
+	return dirs, err
 }

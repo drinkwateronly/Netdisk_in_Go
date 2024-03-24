@@ -16,7 +16,7 @@ import (
 //	db.AutoMigrate(&models.UserBasic{})
 //	db.AutoMigrate(&models.UserRepository{})
 //	db.AutoMigrate(&models.RepositoryPool{})
-//	db.AutoMigrate(&models.RecoveryBasic{})
+//	db.AutoMigrate(&models.RecoveryBatch{})
 //	db.AutoMigrate(&models.ShareRepository{})
 //	db.AutoMigrate(&models.ShareBasic{})
 //

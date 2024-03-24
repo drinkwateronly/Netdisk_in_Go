@@ -69,7 +69,7 @@ func Router() *gin.Engine {
 	officeGroup.POST("/callback", office_service.OfficeCallback)
 
 	// 回收站
-	recoveryGroup := r.Group("recovery_service")
+	recoveryGroup := r.Group("recoveryfile")
 	recoveryGroup.Use(middleware.Authentication)
 	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)
 	recoveryGroup.POST("deleterecoveryfile", recovery_service.DelRecoveryFile)
