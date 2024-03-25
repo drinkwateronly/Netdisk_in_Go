@@ -2,7 +2,6 @@ package models
 
 import (
 	"archive/zip"
-	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/plugin/soft_delete"
 	"io"
@@ -137,10 +136,10 @@ func BuildFileTree(userId string) (*api.UserFileTreeNode, error) {
 	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
 	res := DB.Raw(`with RECURSIVE temp as
 (
-    SELECT * from user_repository where file_name="/" AND user_id = ?
+    SELECT * from user_repository where file_name="/" AND user_id = ? AND deleted_at = 0
     UNION ALL
     SELECT ur.* from user_repository as ur,temp t 
-	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at is NULL
+	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at = 0
 )
 select * from temp;`, userId).Find(&dirs)
 	if res.Error != nil {
@@ -185,7 +184,6 @@ select * from temp;`, userId).Find(&dirs)
 			IsLeaf:     nil,
 			Children:   make([]*api.UserFileTreeNode, 0),
 		}
-		fmt.Printf("%v\n", child)
 		nodeMaps[dirs[i].UserFileId] = &child
 		nodeMaps[child.ParentId].Children = append(nodeMaps[child.ParentId].Children, &child)
 	}

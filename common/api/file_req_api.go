@@ -37,8 +37,8 @@ type UserFileListResp struct {
 
 // ----------------------------------------------------------------
 
-// RenameFileRequest 文件重命名请求API
-type RenameFileRequest struct {
+// RenameFileReq 文件重命名请求API
+type RenameFileReq struct {
 	FileName   string `json:"fileName"`   // 新文件名
 	UserFileId string `json:"userFileId"` // 要修改的文件id
 }

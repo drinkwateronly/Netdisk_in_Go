@@ -65,9 +65,8 @@ func GetUserFileList(c *gin.Context) {
 // @Summary 获取用户从根目录开始的文件树
 // @Accept json
 // @Produce json
-// @Success 200 {object} api_models.RespData{data=api_models.UserFileTreeNode} "文件列表"
-// @Failure 400 {object} string "参数出错"
-// @Router /file/getfilelist [GET]
+// @Success 200 {object} response.RespData{data=api.UserFileTreeNode} "文件树根节点"
+// @Router /file/getfiletree [GET]
 func GetFileTree(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
@@ -76,7 +75,7 @@ func GetFileTree(c *gin.Context) {
 	var root *api.UserFileTreeNode
 	root, err := models.BuildFileTree(ub.UserId)
 	if err != nil {
-		response.RespOK(writer, response.DATABASEERROR, true, root, err.Error())
+		response.RespOK(writer, response.DatabaseError, true, root, err.Error())
 		return
 	}
 	response.RespOK(writer, 0, true, root, "成功")

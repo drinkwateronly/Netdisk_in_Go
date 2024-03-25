@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"netdisk_in_go/common/api"
 	"netdisk_in_go/common/filehandler"
 	"netdisk_in_go/common/response"
@@ -23,38 +24,70 @@ func RenameFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
 	ub := c.MustGet("userBasic").(*models.UserBasic)
-	var req api.RenameFileRequest
+	var req api.RenameFileReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		response.RespBadReq(writer, "出现错误")
+		response.RespBadReq(writer, "请求参数错误")
 		return
 	}
 	// 校验文件名称
-	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"") {
-		response.RespOKFail(writer, response.FileNameNotValid, "命名失败，文件名称出现非法字符")
+	if strings.ContainsAny(req.FileName, "|<>/\\:*?\"\n\t\r") {
+		response.RespOKFail(writer, response.FileNameNotValid, "文件名称出现非法字符")
 		return
 	}
-	// 更新文件名
-	res := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
-		Updates(models.UserRepository{
-			FileName: req.FileName,
-		})
-	if models.IsDuplicateEntryErr(res.Error) {
-		// 由于user_repository表中设置了UNIQUE INDEX `user_id`(`user_id`, `parent_id`, `file_name`, `extend_name`, `file_type`)
-		// 因此文件记录的上述字段重复时会触发Error 1062 (23000): Duplicate entry
-		response.RespOKFail(writer, response.FileNameNotValid, "文件名重复")
-		return
-	} else if res.RowsAffected == 0 {
-		// 没有出现重复，update也没有影响行数
-		response.RespOKFail(writer, response.FileNotExist, "文件不存在")
-		return
-	}
-	if err != nil {
-		response.RespOKFail(writer, response.DatabaseError, "数据库出错")
-		return
-	}
-	response.RespOKSuccess(writer, 0, nil, "文件名修改成功")
-	return
+
+	err = models.DB.Transaction(func(tx *gorm.DB) error {
+		// 当UserFileId对应文件时，FindAllFilesFromFileId只会找到文件本身的记录
+		// 当UserFileId对应文件夹时，FindAllFilesFromFileId会找到该文件夹及其内部所有文件的记录
+		ubs, err := models.FindAllFilesFromFileId(tx, ub.UserId, req.UserFileId)
+		if err != nil {
+			return err
+		}
+
+		// 根据递归查询的结果来看，ubs[0]是要更名的文件
+
+		// ubs[0]如果是文件夹，且其内部有文件，则要修改其内部文件的路径中对应该文件夹的名称
+		// 例如，修改"/111/222"为"/111/333"时，该文件夹内部的所有文件路径都要改为"/111/333/..."
+		// 这个过程就是拼接 "/111/" + 新修改文件名 + "/..."，因此使用双指针分割字符串
+		var left, right int
+		if ubs[0].FilePath == "/" {
+			left = 1 // 例外，len("/")
+		} else {
+			left = len(ubs[0].FilePath + "/") // 定位到路径中修改文件夹的左，即len("/111/")
+		}
+		curFolderFullPath := filehandler.ConCatFileFullPath(ubs[0].FilePath, ubs[0].FileName)
+		right = len(curFolderFullPath) // 定位到路径中修改文件夹的右，即len("/111/333")
+
+		// 修改剩下文件的路径信息
+		for i := 1; i < len(ubs); i++ {
+			tmpPath := ubs[i].FilePath
+			if len(tmpPath) < right {
+				// 定位右侧超过了路径长度，所以路径右侧是空的，就不需要拼接右边
+				ubs[i].FilePath = tmpPath[:left] + req.FileName
+			} else {
+				ubs[i].FilePath = tmpPath[:left] + req.FileName + tmpPath[right:]
+			}
+		}
+		// 最后再修改该文件的文件名
+		ubs[0].FileName = req.FileName
+		// user_file_id重复时更新，不重复时插入，此处是为了多个记录的更新，不会插入新数据。
+		res := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_file_id"}},                      // 主键id
+			DoUpdates: clause.AssignmentColumns([]string{"file_name", "file_path"}), // 要更新的列名
+		}).Create(ubs)
+
+		if res.RowsAffected == 0 {
+			// update也没有影响行数，即文件记录不存在
+			response.RespOKFail(writer, response.FileNotExist, "文件不存在")
+			return err
+		}
+		if res.Error != nil {
+			response.RespOKFail(writer, response.DatabaseError, "数据库出错")
+			return err
+		}
+		response.RespOKSuccess(writer, 0, nil, "文件名修改成功")
+		return nil
+	})
 }
 
 // MoveFile
