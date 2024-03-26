@@ -59,6 +59,7 @@ func Router() *gin.Engine {
 	fileOpGroup.POST("/renamefile", file_service.RenameFile)
 	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)
 	fileOpGroup.POST("/movefile", file_service.MoveFile)
+	fileOpGroup.POST("/batchmovefile", file_service.MoveFileInBatch)
 
 	// office
 	officeGroup := r.Group("office")
