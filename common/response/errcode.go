@@ -13,6 +13,8 @@ var (
 	FileRepeat     = 20001
 	FileNotExist   = 20002
 
+	FolderLoopError = 30000
+
 	FileRecordNotExist = 20003
 	FileNameNotValid   = 20009
 

@@ -85,3 +85,8 @@ func RespOkWithDataList(w http.ResponseWriter, code int, dataList interface{}, t
 		panic(err)
 	}
 }
+
+func RespUnAuthorized(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+}

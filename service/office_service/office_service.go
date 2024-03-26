@@ -36,8 +36,8 @@ func PreviewOfficeFile(c *gin.Context) {
 	}
 	userFileId := json["userFileId"].(string)
 	// 查询用户文件基本信息
-	rb, isExist := models.FindUserFileById(models.DB, ub.UserId, userFileId)
-	if !isExist {
+	rb, err := models.FindUserFileById(models.DB, ub.UserId, userFileId)
+	if err != nil {
 		response.RespBadReq(writer, "用户信息不存在")
 		return
 	}

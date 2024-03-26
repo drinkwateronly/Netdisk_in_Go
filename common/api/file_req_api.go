@@ -43,6 +43,12 @@ type RenameFileReq struct {
 	UserFileId string `json:"userFileId"` // 要修改的文件id
 }
 
+// MoveFileReq 文件移动请求API
+type MoveFileReq struct {
+	FilePath   string `json:"filePath"`   // 目标文件夹绝对路径
+	UserFileId string `json:"userFileId"` // 源文件的用户文件标识符
+}
+
 // ----------------------------------------------------------------
 
 type UserFileTreeNode struct {
@@ -143,10 +149,4 @@ type SaveShareReq struct {
 	FilePath      string `form:"filePath"`
 	UserFileIds   string `form:"userFileIds"`
 	ShareBatchNum string `form:"shareBatchNum"`
-}
-
-// MoveFileReqAPI 文件移动请求API
-type MoveFileReqAPI struct {
-	FilePath   string `json:"filePath"`
-	UserFileId string `json:"userFileId"`
 }

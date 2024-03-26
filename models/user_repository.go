@@ -2,6 +2,7 @@ package models
 
 import (
 	"archive/zip"
+	"errors"
 	"gorm.io/gorm"
 	"gorm.io/plugin/soft_delete"
 	"io"
@@ -91,16 +92,16 @@ func FindFileByNameAndPath(db *gorm.DB, userId, filePath, fileName, extendName s
 	return &ur, true, nil
 }
 
-func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, bool) {
+func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, error) {
 	var file UserRepository
 	// 分页查询
-	rowsAffected := tx.Where("user_id = ? and user_file_id = ?", userId, userFileId).
-		Find(&file).RowsAffected
-	if rowsAffected == 0 { // 文件不存在
-		return nil, false
+	err := tx.Where("user_id = ? and user_file_id = ?", userId, userFileId).
+		Find(&file).Error
+	if err != nil { // 文件不存在
+		return nil, err
 	}
 	// 文件存在或者出错
-	return &file, true
+	return &file, nil
 }
 
 func FindUserFilesByIds(tx *gorm.DB, userId string, userFileIds []string) ([]*UserRepository, bool) {
@@ -448,7 +449,7 @@ func FindFolderFromAbsPath(tx *gorm.DB, userId, absPath string) (*UserRepository
 	}
 	// 查询该文件夹
 	err = tx.Where("file_path = ? AND file_name = ? AND user_id = ? AND is_dir = 1", parentPath, folderName, userId).
-		Find(&file).Error
+		First(&file).Error
 	if err != nil {
 		// err包括记录不存在
 		return nil, err
@@ -480,7 +481,7 @@ func FindAllFilesFromFileId(tx *gorm.DB, userId, dirId string) ([]*UserRepositor
 	// 只需要在递归的初始条件限定user_id即可
 	err := tx.Raw(`with RECURSIVE temp as
 (
-    SELECT * from user_repository where user_file_id= ? AND user_id = ?
+    SELECT * from user_repository where user_file_id= ? AND user_id = ? AND deleted_at = 0
     UNION ALL
     SELECT ur.* from user_repository as ur,temp t 
 	where ur.parent_id=t.user_file_id AND ur.deleted_at = 0
@@ -488,6 +489,9 @@ func FindAllFilesFromFileId(tx *gorm.DB, userId, dirId string) ([]*UserRepositor
 select * from temp;`, dirId, userId).Find(&dirs).Error
 	if err != nil {
 		return nil, err
+	}
+	if len(dirs) == 0 {
+		return nil, errors.New("record not found")
 	}
 	return dirs, err
 }

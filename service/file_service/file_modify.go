@@ -14,12 +14,12 @@ import (
 
 // RenameFile
 // @Summary 文件重命名
-// @Tags Files
+// @Tags file
 // @Accept json
 // @Produce json
-// @Param req query api.MoveFileReqAPI true "请求"
+// @Param req query api.MoveFileReq true "请求"
 // @Success 200 {object} response.RespData "响应"
-// @Router /file/getfilelist [GET]
+// @Router /file/renamefile [GET]
 func RenameFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
@@ -92,19 +92,22 @@ func RenameFile(c *gin.Context) {
 
 // MoveFile
 // @Summary 文件移动
-// @Tags Files
+// @Tags file
 // @Accept json
 // @Produce json
-// @Param req query api.MoveFileReqAPI true "请求"
-// @Success 200 {object} api.RespData
-// @Failure default {object} api.RespData
-// @Router /file/getfilelist [GET]
+// @Param req query api.MoveFileReq true "请求"
+// @Success 200 {object} response.RespData  "响应"
+// @Router /file/movefile [POST]
 func MoveFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, isExist := models.GetUserBasicFromContext(c)
+	if !isExist {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 绑定请求参数
-	var req api.MoveFileReqAPI
+	var req api.MoveFileReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		response.RespBadReq(writer, "出现错误")
@@ -113,87 +116,105 @@ func MoveFile(c *gin.Context) {
 
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		// 查询源文件是否存在
-		sourceFileUr, isExist := models.FindUserFileById(tx, ub.UserId, req.UserFileId)
-		if !isExist {
-			return errors.New("源文件夹不存在")
-		}
-		// 根据req中目的文件夹的绝对路径，查询该目的文件夹是否存在
-		destFolder, err := models.FindFolderFromAbsPath(tx, ub.UserId, req.FilePath)
-		if err != nil || destFolder == nil {
-			return errors.New("目的文件夹不存在")
-		}
-		if sourceFileUr.ParentId == destFolder.UserFileId {
-			return errors.New("该文件已在当前目录中")
-		}
-		// 源文件是否是文件夹
-		if sourceFileUr.IsDir == 0 {
-			// 移动的是文件
-			// 查询是否有同名文件的存在，有则重命名源文件
-			res := models.DB.
-				Where("user_id = ? AND parent_id = ? AND file_name = ? AND extend_name = ?",
-					ub.UserId, destFolder.UserFileId, sourceFileUr.FileName, sourceFileUr.ExtendName).
-				Find(&models.UserRepository{})
-			if res.Error != nil {
-				return err
-			}
-			fileName := sourceFileUr.FileName
-			// 有同名文件，则重新命名，添加后缀
-			if res.RowsAffected != 0 {
-				fileName = filehandler.RenameConflictFile(fileName)
-			}
-			// 更新源文件记录
-			if err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
-				Updates(&models.UserRepository{
-					FilePath: req.FilePath,          // 新路径
-					ParentId: destFolder.UserFileId, // 新父文件id
-					FileName: fileName,              // 文件名
-				}).Error; err != nil {
-				return err
-			}
-			return nil
-		}
-		// 移动的是文件夹，即ur.Isdir == 1
-		// 移动文件夹时嵌套文件夹为非法操作
-		// 例如源文件夹'/A/B'移动到目的文件夹`A/B/C`中是非法的，因为C被B包含
-		sourcePath := req.FilePath
-		destPath := filehandler.ConCatFileFullPath(sourceFileUr.FilePath, sourceFileUr.FileName)
-		// 从路径名判断，源文件夹是否被目的文件夹包含
-		if req.FilePath != "/" && strings.HasPrefix(destPath, sourcePath) {
-			return errors.New("目的文件夹在所移动文件夹内")
-		}
-
-		var allFiles []models.UserRepository
-		// 找到源文件夹下所有文件记录，包括源文件夹本身
-		err = models.DB.Raw(`with RECURSIVE temp as
-(
-    SELECT * from user_repository where user_file_id = ?
-    UNION ALL
-    SELECT ur.* from user_repository as ur,temp t 
-	where ur.parent_id=t.user_file_id AND ur.deleted_at is NULL
-)
-select * from temp;`, sourceFileUr.UserFileId).Find(&allFiles).Error
+		sourceFileUr, err := models.FindUserFileById(tx, ub.UserId, req.UserFileId)
 		if err != nil {
+			response.RespOKFail(writer, response.FileNotExist, "源文件不存在")
 			return err
 		}
-		// 更新文件记录
-		// todo:文件同名冲突处理
-		// todo:文件夹同名冲突处理
-		prePathLen := len(allFiles[0].FilePath)
-		allFiles[0].ParentId = destFolder.UserFileId
-		allFiles[0].FilePath = req.FilePath
-		for i := 1; i < len(allFiles); i++ {
-			// 将父文件名称替换
-			if req.FilePath == "/" {
-				allFiles[i].FilePath = allFiles[i].FilePath[prePathLen:]
+		// 源文件之前的FilePath
+		preSourcePath := sourceFileUr.FilePath
+		preSouceName := sourceFileUr.FileName
+		curSoucePath := req.FilePath
+
+		// 根据req中目的文件夹的绝对路径，查询该目的文件夹是否存在
+		destFolder, err := models.FindFolderFromAbsPath(tx, ub.UserId, req.FilePath)
+		if err != nil {
+			response.RespOKFail(writer, response.FileNotExist, "目的文件夹不存在")
+			return err
+		}
+		// 源文件已在目的文件夹下，不需要移动
+		if sourceFileUr.ParentId == destFolder.UserFileId {
+			response.RespOKFail(writer, response.FileRepeat, "该文件已在当前目录中")
+			return errors.New("file repeat")
+		}
+
+		// 查询目的文件夹是否有同名文件的存在
+		for {
+			res := tx.Where("user_id = ? AND parent_id = ? AND file_name = ? AND extend_name = ?",
+				ub.UserId, destFolder.UserFileId, sourceFileUr.FileName, sourceFileUr.ExtendName).
+				Find(&models.UserRepository{})
+			if res.Error != nil {
+				response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+				return err
+			}
+			// 有同名文件，则重新命名，添加后缀
+			if res.RowsAffected != 0 {
+				sourceFileUr.FileName = filehandler.RenameConflictFile(sourceFileUr.FileName)
 			} else {
-				allFiles[i].FilePath = req.FilePath + "/" + allFiles[i].FilePath[prePathLen:]
+				// 直到没有同名文件
+				break
 			}
 		}
+		sourceFileUr.ParentId = destFolder.UserFileId
+		sourceFileUr.FilePath = req.FilePath
+
+		if sourceFileUr.IsDir == 0 { // 源文件类型不是文件夹
+			// 更新源文件记录
+			err := models.DB.Where("user_id = ? AND user_file_id = ?", ub.UserId, req.UserFileId).
+				Updates(&sourceFileUr).Error
+			if err != nil {
+				response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+				return err
+			}
+			response.RespOK(writer, 0, true, nil, "文件移动成功")
+			return nil
+		}
+		// 源文件类型是文件夹
+		var allFiles []*models.UserRepository
+		// 找到源文件夹下所有文件记录，包括源文件夹本身
+		allFiles, err = models.FindAllFilesFromFileId(tx, ub.UserId, req.UserFileId)
+		if err != nil {
+			response.RespOKFail(writer, response.FileNotExist, "源文件夹不存在")
+			return err
+		}
+
+		// allFiles[0]变为sourceFileUr，此处为了后续一次性将allFiles更新到数据库
+		// 而不需要先更新sourceFileUr，在更新剩余的allFiles[1:]
+		allFiles[0].ParentId = sourceFileUr.ParentId
+		allFiles[0].FileName = sourceFileUr.FileName
+		allFiles[0].FilePath = sourceFileUr.FilePath
+
+		// 新的路径前缀
+		var newPathPrefix string
+		if req.FilePath == "/" {
+			// curSoucePath就是"/"
+			newPathPrefix = "/" + allFiles[0].FileName
+		} else {
+			newPathPrefix = curSoucePath + "/" + allFiles[0].FileName
+		}
+		// 之前的前缀长度
+		prePrefixLen := len(filehandler.ConCatFileFullPath(preSourcePath, preSouceName))
+
+		// 移动文件，开始更新文件记录
+		for i := 1; i < len(allFiles); i++ {
+			if allFiles[i].UserFileId == destFolder.UserFileId {
+				// 目的文件夹在源文件夹中，即源文件夹包括目的文件夹，会导致文件夹无限嵌套
+				response.RespOKFail(writer, response.FolderLoopError, "非法操作，源文件夹包括目的文件夹")
+				return errors.New("folder loop error")
+			}
+			// 将旧的路径前缀换为新的路径前缀
+			allFiles[i].FilePath = newPathPrefix + allFiles[i].FilePath[prePrefixLen:]
+		}
+		// 直接更新这些文件记录
+		err = tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_file_id"}},                                   // 主键id
+			DoUpdates: clause.AssignmentColumns([]string{"parent_id", "file_path", "file_name"}), // 要更新的列名
+		}).Create(allFiles).Error
+		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+			return err
+		}
+		response.RespOK(writer, 0, true, nil, "文件移动成功")
 		return nil
 	})
-	if err != nil {
-		response.RespOK(writer, 999999, false, nil, err.Error())
-		return
-	}
-	response.RespOK(writer, 0, true, nil, "文件移动成功")
 }

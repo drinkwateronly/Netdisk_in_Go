@@ -38,8 +38,8 @@ func DeleteFile(c *gin.Context) {
 	var delStorageSize uint64
 	// 开启事务，删除文件夹
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
-		ur, isExist := models.FindUserFileById(tx, ub.UserId, req.UserFileId)
-		if !isExist {
+		ur, err := models.FindUserFileById(tx, ub.UserId, req.UserFileId)
+		if err != nil {
 			return errors.New("文件不存在")
 		}
 		// 当删除的是文件时，FindAllFilesFromFileId只会找到文件本身的记录

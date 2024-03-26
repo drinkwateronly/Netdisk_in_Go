@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"time"
 )
@@ -62,4 +63,13 @@ func UpdateUserStorageSize(tx *gorm.DB, userId string, newStorageSize uint64) er
 		return res.Error
 	}
 	return nil
+}
+
+// GetUserBasicFromContext 从gin.Context中获取中间件存放的userBasic字段，如果没有，则是未登录状态
+func GetUserBasicFromContext(c *gin.Context) (*UserBasic, bool) {
+	ub, boo := c.Get("userBasic")
+	if !boo {
+		return nil, false
+	}
+	return ub.(*UserBasic), true
 }
