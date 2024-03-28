@@ -55,7 +55,7 @@ func GetUserFileList(c *gin.Context) {
 		files, totalCount, err = models.PageQueryFilesByType(req.FileType, ub.UserId, req.CurrentPage, req.PageCount)
 	}
 	if err != nil {
-		response.RespOK(writer, response.DATABASEERROR, false, nil, err.Error())
+		response.RespOK(writer, response.DatabaseError, false, nil, err.Error())
 		return
 	}
 	response.RespOkWithDataList(writer, response.Success, files, totalCount, "文件列表")

@@ -15,6 +15,13 @@ import (
 	"time"
 )
 
+// FileUploadPrepare
+// @Summary 文件上传预备
+// @Produce json
+// @Param req body api.FileUploadReqAPI true "文件上传请求"
+// @Success 200 {object} string "存储容量"
+// @Failure 400 {object} string "参数出错"
+// @Router /filetransfer/uploadfileprepare [GET]
 func FileUploadPrepare(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
@@ -32,16 +39,16 @@ func FileUploadPrepare(c *gin.Context) {
 
 	// 开启事务
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
-		// 判断存储空间是否足够，前端已经做好了此判断工作。
+		// 判断存储空间是否足够
 		if ub.StorageSize+req.TotalSize > ub.TotalStorageSize {
 			return errors.New("用户存储空间不足")
 		}
 
-		// 判断文件夹是否存在
-		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
-		if err != nil {
-			return errors.New("文件夹不存在")
-		}
+		//// 判断文件夹是否存在
+		//parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
+		//if err != nil {
+		//	return errors.New("文件夹不存在")
+		//}
 
 		// 判断文件在当前文件夹是否重名
 		_, isExist, err := models.FindFileByNameAndPath(tx, ub.UserId,
@@ -68,16 +75,16 @@ func FileUploadPrepare(c *gin.Context) {
 		// 		2.存放文件的文件夹存在，直接创建文件记录
 
 		// 查存储文件的文件夹是否存在
-		parentDir, err = models.FindParentDirFromFilePath(tx, ub.UserId, processedFileInfo.AbsPath)
-		if err != nil {
-			return errors.New("文件夹不存在")
-		}
+		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, processedFileInfo.AbsPath)
+		//if err != nil {
+		//	return errors.New("文件夹不存在")
+		//}
 
 		var parentId string     // 记录当前文件/文件夹的父文件夹id
 		curPath := req.FilePath // 当前路径就是文件上传时候的根路径
 		// if成立时，存放上传文件的文件夹不存在，这种情况常见于整个文件夹的上传时存在相对路径
 		// 例在/123目录上传456/789/0.txt，接下来的步骤将在文件夹123按顺序创建文件夹456和789
-		if !isExist {
+		if err != nil {
 			// 找到/123的文件id
 			uploadRoot, err := models.FindParentDirFromFilePath(tx, ub.UserId, curPath)
 			if err != nil {
@@ -97,8 +104,7 @@ func FileUploadPrepare(c *gin.Context) {
 			for _, folderName := range folderList {
 				var folder models.UserRepository
 				// 当前文件上传的目录filePath有没有名为folderName的文件夹
-				res := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-					Where("user_id = ? AND file_name = ? AND file_path = ? AND is_dir = 1", ub.UserId, folderName, curPath).
+				res := tx.Where("user_id = ? AND file_name = ? AND file_path = ? AND is_dir = 1", ub.UserId, folderName, curPath).
 					Find(&folder)
 				if res.Error != nil {
 					return res.Error
@@ -171,9 +177,6 @@ func FileUploadPrepare(c *gin.Context) {
 // @Summary 文件上传
 // @Produce json
 // @Param req body api.FileUploadReqAPI true "文件上传请求"
-// @Param cookie query string true "Cookie"
-// @Success 200 {object} string "存储容量"
-// @Failure 400 {object} string "参数出错"
 // @Router /filetransfer/uploadfile [POST]
 func FileUpload(c *gin.Context) {
 	var savePath string
@@ -233,17 +236,11 @@ func FileUpload(c *gin.Context) {
 			processedFileInfo.ExtendName); isExist {
 			return errors.New("文件在当前文件夹已存在")
 		}
-		if err != nil {
-			return errors.New("文件夹不存在")
-		}
+		//if err != nil {
+		//	return errors.New("文件夹不存在")
+		//}
 		// 根据绝对路径 判断文件的父文件夹是否存在
-		fmt.Println("processedFileInfo.AbsPath", processedFileInfo.AbsPath)
-
 		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, processedFileInfo.AbsPath)
-		if err != nil {
-			return err
-		}
-
 		var parentId string     // 记录当前文件/文件夹的父文件夹id
 		curPath := req.FilePath // 当前路径就是文件上传时候的根路径
 		// if成立时，存放上传文件的文件夹不存在，这种情况常见于整个文件夹的上传时存在相对路径

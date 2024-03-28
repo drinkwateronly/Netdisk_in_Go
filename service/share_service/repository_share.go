@@ -164,7 +164,7 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 		return nil
 	})
 	if err != nil {
-		response.RespOK(writer, response.DATABASEERROR, false, nil, err.Error())
+		response.RespOK(writer, response.DatabaseError, false, nil, err.Error())
 		return
 	}
 	response.RespOK(writer, 0, true, gin.H{

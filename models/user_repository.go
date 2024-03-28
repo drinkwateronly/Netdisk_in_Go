@@ -281,7 +281,6 @@ func GetUserAllFiles(userId string) ([]*UserRepository, error) {
 // output：文件夹记录，isExist，error
 func FindParentDirFromFilePath(db *gorm.DB, userId, filePath string) (*UserRepository, error) {
 	var ur UserRepository
-	var err error
 	var res *gorm.DB
 	if filePath == "/" {
 		res = db.Where("user_id = ? AND file_name = '/'", userId).First(&ur)
@@ -295,7 +294,7 @@ func FindParentDirFromFilePath(db *gorm.DB, userId, filePath string) (*UserRepos
 		res = db.Where("user_id = ? AND file_path = ? AND file_name = ? AND is_dir='1'", userId, folderPath, folderName).First(&ur)
 	}
 	if res.Error != nil {
-		return nil, err
+		return nil, res.Error
 	}
 	return &ur, nil
 }

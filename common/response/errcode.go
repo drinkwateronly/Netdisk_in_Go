@@ -22,9 +22,7 @@ var (
 	SaveFileNotExist = 30002
 	GenZipError      = 30003
 
-	FILECREATEERROR    = 50000
-	FileSaveError      = 50001
-	FILETYPENOTSUPPORT = 50002
+	FileSaveError = 50001
 
 	FileNotDeleted       = 60000
 	RecoveryFileNotExist = 600001
@@ -34,7 +32,6 @@ var (
 
 	ReqParamNotValid = 10000
 
-	DATABASEERROR = 99999
 	DatabaseError = 99999
 
 	NotSupport = 88888
