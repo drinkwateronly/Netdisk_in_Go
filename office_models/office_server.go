@@ -1,5 +1,10 @@
 package office_models
 
+import (
+	"fmt"
+	"netdisk_in_go/sysconfig"
+)
+
 type Info struct {
 	Owner  string `json:"owner"`  // "Me"即可
 	Upload string `json:"upload"` // "上传的时间字符串"
@@ -7,7 +12,9 @@ type Info struct {
 }
 
 type Permission struct {
+	Chat                 bool              `json:"chat" default:"true"`
 	Comment              bool              `json:"comment" default:"true"`
+	CommentGroup         map[string]string `json:"commentGroups"`
 	Copy                 bool              `json:"copy" default:"true"`
 	Download             bool              `json:"download" default:"true"`
 	Edit                 bool              `json:"edit"`
@@ -16,8 +23,6 @@ type Permission struct {
 	ModifyFilter         bool              `json:"modifyFilter" default:"true"`
 	ModifyContentControl bool              `json:"modifyContentControl" default:"true"`
 	Review               bool              `json:"review" default:"true"`
-	Chat                 bool              `json:"chat" default:"true"`
-	CommentGroup         map[string]string `json:"commentGroup"`
 }
 
 type Document struct {
@@ -42,20 +47,15 @@ type Logo struct {
 }
 
 type Customization struct {
-	Logo               Logo        `json:"logo"`
-	AutoSave           bool        `json:"autosave" default:"true"`
-	Comments           bool        `json:"comments" default:"true"`
-	CompactHeader      bool        `json:"compactHeader" default:"true"`
-	CompactToolbar     interface{} `json:"compactToolbar" default:"true"`
-	CompatibleFeatures interface{} `json:"compatibleFeatures" default:"true"`
-	ForceSave          interface{} `json:"forcesave" default:"true"`
-	Help               bool        `json:"help" default:"true"`
-	HideNotes          interface{} `json:"hideNotes"`
-	HideRightMenu      interface{} `json:"hideRightMenu" default:"false"`
-	HideRulers         interface{} `json:"hideRuler" default:"false"`
-	SubmitForm         bool        `json:"submitForm" default:"false"`
-	About              bool        `json:"about" default:"true"`
-	FeedBack           bool        `json:"feedBack" default:"true"`
+	//Logo               Logo        `json:"logo"`
+	AutoSave           bool `json:"autosave" default:"true"`
+	Comments           bool `json:"comments" default:"true"`
+	CompactHeader      bool `json:"compactHeader" default:"true"`
+	CompactToolbar     bool `json:"compactToolbar" default:"true"`
+	CompatibleFeatures bool `json:"compatibleFeatures" default:"true"`
+	//ForceSave          interface{} `json:"forcesave" default:"true"`
+	//Help          bool        `json:"help" default:"true"`
+
 }
 
 type Embedded struct {
@@ -88,10 +88,18 @@ type EditorConfig struct {
 	CoEditing     CoEditing     `json:"coEditing"`
 	CreateUrl     string        `json:"createUrl"`
 	Customization Customization `json:"customization"`
-	Lang          string        `json:"lang" default:"zh"`
-	Mode          string        `json:"mode" default:"view"`
-	User          User          `json:"user"`
-	Templates     []Template    `json:"templates"`
+
+	HideNotes     bool `json:"hideNotes"`
+	HideRightMenu bool `json:"hideRightMenu" default:"false"`
+	HideRulers    bool `json:"hideRuler" default:"false"`
+	SubmitForm    bool `json:"submitForm" default:"false"`
+
+	Lang      string     `json:"lang" default:"zh"`
+	Region    string     `json:"region" default:""`
+	Mode      string     `json:"mode" default:"view"`
+	User      User       `json:"user"`
+	Templates []Template `json:"templates"`
+	ForceSave bool       `json:"forcesave"`
 }
 
 type File struct {
@@ -104,7 +112,7 @@ type File struct {
 
 type Data struct {
 	File             File   `json:"file"`
-	DocserviceApiUrl string `json:"docserviceApiUrl" default:"https://172.171.0.4:9696/web-apps/apps/api/documents/api.js"`
+	DocserviceApiUrl string `json:"docserviceApiUrl"`
 	ReportName       string `json:"reportName"`
 }
 
@@ -119,23 +127,15 @@ var (
 		ModifyFilter:         true,
 		ModifyContentControl: true,
 		Review:               true,
-		Chat:                 true,
-		CommentGroup:         nil,
+		Chat:                 false,
+		CommentGroup:         make(map[string]string, 0),
 	}
 	DefaultCustomization = Customization{
-		Logo:               Logo{},
 		AutoSave:           true,
 		Comments:           true,
 		CompactHeader:      true,
 		CompactToolbar:     true,
 		CompatibleFeatures: true,
-		ForceSave:          true,
-		Help:               true,
-		HideRightMenu:      false,
-		HideRulers:         false,
-		SubmitForm:         false,
-		About:              true,
-		FeedBack:           true,
 	}
 	DefaultCoEditing = CoEditing{
 		Mode:   "fast",
@@ -145,29 +145,39 @@ var (
 )
 
 func NewData(user User, token string, document Document, documentType string) *Data {
+	config := sysconfig.Config.OfficeConfig
+
+	callbackUrl := "http://172.31.226.81:8080/office/callback"
+	createUrl := "http://172.31.226.81:8080/file/createFile"
+	docserviceApiUrl := fmt.Sprintf("http://%s:%s/web-apps/apps/api/documents/api.js", config.Host, config.Port)
 	data := Data{
 		File: File{
 			Document:     document,
 			DocumentType: documentType,
 			EditorConfig: EditorConfig{
 				Customization: DefaultCustomization,
-				CallbackUrl:   "http://172.31.226.81:8080/office/callback",
-				CreateUrl:     "http://172.31.226.81:8080/file/createFile",
-				Lang:          "zh",
-				Mode:          "edit",
-				CoEditing:     DefaultCoEditing,
-				User:          user,
+				CallbackUrl:   callbackUrl,
+				CreateUrl:     createUrl,
+
+				HideNotes:     false,
+				HideRulers:    false,
+				HideRightMenu: false,
+				SubmitForm:    true,
+
+				Lang: "zh-CN",
+				//Region:      "zh",
+				Mode:      "edit",
+				ForceSave: false,
+				CoEditing: DefaultCoEditing,
+				User:      user,
 			},
+
 			Token: token,
 			Type:  "desktop",
 		},
-		DocserviceApiUrl: "http://172.31.226.34:9696/web-apps/apps/api/documents/api.js",
-		ReportName:       "123",
+		DocserviceApiUrl: docserviceApiUrl,
+		//ReportName:       "123",
 	}
 
 	return &data
-}
-
-type OfficeError struct {
-	Error int `json:"error"`
 }

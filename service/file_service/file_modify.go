@@ -95,7 +95,7 @@ func RenameFile(c *gin.Context) {
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param req query api.MoveFileReq true "请求"
+// @Param req body api.MoveFileReq true "请求"
 // @Success 200 {object} response.RespData  "响应"
 // @Router /file/movefile [POST]
 func MoveFile(c *gin.Context) {
@@ -219,6 +219,14 @@ func MoveFile(c *gin.Context) {
 	})
 }
 
+// MoveFileInBatch
+// @Summary 文件批量移动
+// @Tags file
+// @Accept json
+// @Produce json
+// @Param req body api.MoveFileInBatchReq true "请求"
+// @Success 200 {object} response.RespData  "响应"
+// @Router /file/batchmovefile [POST]
 func MoveFileInBatch(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息

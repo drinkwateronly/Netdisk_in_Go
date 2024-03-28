@@ -1,7 +1,6 @@
 package sysconfig
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 )
 
@@ -47,6 +46,5 @@ func InitConfig() {
 	if err := viper.Unmarshal(&Config); err != nil {
 		panic(err)
 	}
-	fmt.Printf("%v", Config)
 
 }

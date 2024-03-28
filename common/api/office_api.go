@@ -1,6 +1,15 @@
-package office_models
+package api
 
-type CallbackHandler struct {
+type OfficeFilePreviewReq struct {
+	UserFileId string `form:"userFileId"` // 用户文件id
+	Cookie     string `form:"token"`      // cookie
+}
+
+type OfficeErrorResp struct {
+	Error int `json:"error"`
+}
+
+type OfficeCallbackReq struct {
 	Actions       []map[string]string `json:"actions"`        // actions:[map[type:1 userid:001]]
 	ChangeHistory []interface{}       `json:"changeshistory"` //
 	ChangesURL    string              `json:"changesurl"`

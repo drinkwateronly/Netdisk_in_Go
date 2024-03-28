@@ -26,6 +26,9 @@ var (
 	FileSaveError      = 50001
 	FILETYPENOTSUPPORT = 50002
 
+	FileNotDeleted       = 60000
+	RecoveryFileNotExist = 600001
+
 	ShareExpired           = 60000
 	ExtractionCodeNotValid = 60001
 

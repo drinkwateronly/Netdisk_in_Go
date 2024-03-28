@@ -5,8 +5,8 @@ mysql:
   host: "172.31.226.34"
   port: "3306"
 office:
-  host: "123"
-  port: "3306"
+  host: "172.31.226.34"
+  port: "9696"
 JWT:
   key: "this-is-a-JWT-key" # 非重要参数
   issuer: "issuer"  # 非重要参数

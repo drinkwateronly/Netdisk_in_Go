@@ -63,7 +63,6 @@ func Router() *gin.Engine {
 
 	// office
 	officeGroup := r.Group("office")
-	officeGroup.Use(middleware.Authentication)
 	officeGroup.POST("/previewofficefile", office_service.PreviewOfficeFile)
 	officeGroup.GET("/filedownload", office_service.OfficeFileDownload)
 	officeGroup.GET("/preview", office_service.OfficeFilePreview)
@@ -74,7 +73,8 @@ func Router() *gin.Engine {
 	recoveryGroup.Use(middleware.Authentication)
 	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)
 	recoveryGroup.POST("deleterecoveryfile", recovery_service.DelRecoveryFile)
-	recoveryGroup.POST("batchdelete", recovery_service.DelRecoveryFilesInBatch)
+	recoveryGroup.POST("batchdelete", recovery_service.DelRecoveryInBatch)
+	recoveryGroup.POST("restorefile", recovery_service.RestoreFile)
 
 	// 文件分享
 	shareGroup := r.Group("share")

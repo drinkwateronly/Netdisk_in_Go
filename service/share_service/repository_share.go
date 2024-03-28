@@ -17,7 +17,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param req body api_models.FileShareReq true "请求"
-// @Success 200 {object} api_models.RespDataList{datalist=[]api_models.RecoveryListRespAPI} "服务器响应成功，根据响应code判断是否成功"
+// @Success 200 {object} api_models.RespDataList{datalist=[]api_models.RecoveryListResp} "服务器响应成功，根据响应code判断是否成功"
 // @Failure 400 {object} string "参数出错"
 // @Router /share/sharefile [POST]
 func FilesShare(c *gin.Context) {
@@ -293,7 +293,7 @@ func SaveShareFile(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-	
+
 		// 获得所有的分享文件的id
 		userFileIds := strings.Split(req.UserFileIds, ",")
 		if len(userFileIds) <= 0 {
