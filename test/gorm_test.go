@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
+	"netdisk_in_go/common/api"
 	"netdisk_in_go/models"
-	ApiModels "netdisk_in_go/models/api_models"
 	"testing"
 )
 
@@ -60,7 +60,7 @@ import (
 //
 //}
 
-func BuildFileTree() (*ApiModels.UserFileTreeNode, error) {
+func BuildFileTree() (*api.UserFileTreeNode, error) {
 	// 存放查询结果
 	var dirs []models.UserRepository
 	// 用户一定有个根目录, 从根目录递归mysql查询所有文件夹
@@ -77,17 +77,17 @@ select * from temp;`).Find(&dirs)
 	}
 	fmt.Printf("%v\n", dirs)
 	// 递归mysql查询结果中，越上层的文件记录越靠前，且同一个父文件夹下的结果都会相邻
-	root := ApiModels.UserFileTreeNode{
+	root := api.UserFileTreeNode{
 		UserFileId: dirs[0].UserFileId,
 		DirName:    dirs[0].FileName,
 		FilePath:   dirs[0].FilePath,
 		Depth:      0,
 		State:      "closed",
 		IsLeaf:     nil,
-		Children:   make([]*ApiModels.UserFileTreeNode, 0),
+		Children:   make([]*api.UserFileTreeNode, 0),
 	}
 	// 建队，根节点入队
-	nodeMaps := make(map[string]*ApiModels.UserFileTreeNode)
+	nodeMaps := make(map[string]*api.UserFileTreeNode)
 	//queue := make([]*ApiModels.UserFileTreeNode, 1)
 	nodeMaps[root.UserFileId] = &root
 	// 设置为当前节点，创建孩子节点空列表
@@ -107,7 +107,7 @@ select * from temp;`).Find(&dirs)
 			filePath = dirs[i].FilePath + "/" + dirs[i].FileName
 		}
 		// 孩子节点
-		child := ApiModels.UserFileTreeNode{
+		child := api.UserFileTreeNode{
 			ParentId:   dirs[i].ParentId,
 			UserFileId: dirs[i].UserFileId,
 			DirName:    dirs[i].FileName,
@@ -115,7 +115,7 @@ select * from temp;`).Find(&dirs)
 			Depth:      0,
 			State:      "closed",
 			IsLeaf:     nil,
-			Children:   make([]*ApiModels.UserFileTreeNode, 0),
+			Children:   make([]*api.UserFileTreeNode, 0),
 		}
 		fmt.Printf("%v\n", child)
 

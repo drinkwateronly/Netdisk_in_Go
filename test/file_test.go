@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"netdisk_in_go/common"
+	"netdisk_in_go/common/filehandler"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 )
@@ -99,15 +101,26 @@ func TestFileIsExist(t *testing.T) {
 }
 
 func TestPathSplit(t *testing.T) {
-	fmt.Println(common.SplitAbsPath("/"))
-	fmt.Println(common.SplitAbsPath("/abc/123"))
-	fmt.Println(common.SplitAbsPath("/abc/ass.123"))
+	fmt.Println(filehandler.SplitAbsPath("/"))
+	fmt.Println(filehandler.SplitAbsPath("/abc/123"))
+	fmt.Println(filehandler.SplitAbsPath("/abc/ass.123"))
 }
 
 func TestRenameConflictFile(t *testing.T) {
-	fmt.Println(common.RenameConflictFile("123"))
-	fmt.Println(common.RenameConflictFile("(1)"))
-	fmt.Println(common.RenameConflictFile("a(1)"))
+	fmt.Println(filehandler.RenameConflictFile("123"))
+	fmt.Println(filehandler.RenameConflictFile("(1)"))
+	fmt.Println(filehandler.RenameConflictFile("a(1)"))
 
 	fmt.Println("/abc/123"[len("/abc"):])
+}
+
+func TestGetFileExt(t *testing.T) {
+	fileName := "1.txt"
+	fmt.Println(filepath.Ext(fileName))
+	fileName = "/232/1.txt"
+	fmt.Println(filepath.Ext(fileName))
+	fileName = "/232/1"
+	fmt.Println(filepath.Ext(fileName))
+	fileName = "/232/1.7z.001"
+	fmt.Println(filepath.Ext(fileName))
 }

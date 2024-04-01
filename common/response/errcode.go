@@ -3,11 +3,12 @@ package response
 var (
 	Success = 0
 
-	Unauthorized   = 10000
-	UserNotExist   = 10001 // 用户不存在
-	WrongPassword  = 10002
-	CookieGenError = 10003
-	CookieNotValid = 10004
+	Unauthorized     = 10000
+	UserNotExist     = 10001 // 用户不存在
+	WrongPassword    = 10002
+	CookieGenError   = 10003
+	CookieNotValid   = 10004
+	StorageNotEnough = 10005
 
 	ParentNotExist = 20000 //
 	FileRepeat     = 20001

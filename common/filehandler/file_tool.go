@@ -12,6 +12,7 @@ import (
 	"io"
 	"netdisk_in_go/common/api"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -181,43 +182,39 @@ func CompressImage(file io.Reader, maxHeight uint, compressQuality int, imageTyp
 
 type ProcessedFileInfo struct {
 	// 假设文件为路径为 "/456/789/0.txt"
-	FullPath   string // "0"
-	AbsPath    string // /456/789，数据库存放的文件目录
-	FileName   string // "txt
-	ExtendName string
-	FileType   uint8
+	AbsPath    string // "/456/789/0.txt"
+	FilePath   string // "/456/789"
+	FileName   string // "0.txt"
+	ExtendName string // "txt"
+	FileType   uint8  //
 }
 
 // GetFileInfoFromReq 从文件上传请求参数api.FileUploadReqAPI中处理出用于文件上传的必须参数，以ProcessedFileInfo保存
 func GetFileInfoFromReq(req api.FileUploadReqAPI) ProcessedFileInfo {
 	var fileInfo ProcessedFileInfo
 	// 文件名与文件拓展名
-	split := strings.Split(req.FileFullName, ".")
-	if len(split) == 1 { // 没有文件拓展名
-		fileInfo.ExtendName = ""
-		fileInfo.FileName = req.FileFullName
-	} else {
-		fileInfo.ExtendName = split[len(split)-1]
-		fileInfo.FileName = req.FileFullName[0 : len(req.FileFullName)-len(fileInfo.ExtendName)-1] // 去掉文件全名右侧的拓展名
+	ext := filepath.Ext(req.FileName) // 拓展名前带'.'
+	fileInfo.FileName = req.FileName[:len(req.FileName)-len(ext)]
+	if len(ext) != 0 {
+		ext = ext[1:] // 去掉 '.'
 	}
+	fileInfo.ExtendName = ext
+
 	// 文件拓展名映射为文件类型
-	fileInfo.FileType = FileTypeId[fileInfo.ExtendName]
+	fileInfo.FileType = getFileType(ext)
 	if req.IsDir == 1 {
-		fileInfo.FileType = 6 // 文件夹
-	} else if fileInfo.FileType == 0 {
-		fileInfo.FileType = 5 // 其他
+		fileInfo.FileType = DIRECTORY // 文件夹
 	}
-	// 包括文件名的完整路径fileFullPath
-	var fileFullPath string
-	if req.FilePath == "/" {
-		fileFullPath = "/" + req.RelativePath
+
+	// 拼接出文件绝对路径，包括文件名，例如"/456/123.txt"
+	absPath := ConCatFileFullPath(req.FilePath, req.RelativePath)
+
+	if absPath == "/"+req.FileName { // 或者len(absPath) == len(req.FileName)+1
+		// 上传文件存放到网盘根目录，例如absPath = "/123.txt"
+		fileInfo.FilePath = "/"
 	} else {
-		fileFullPath = req.FilePath + "/" + req.RelativePath
-	}
-	if len(fileFullPath) == len(req.FileFullName)+1 { // 即多出了一个/
-		fileInfo.AbsPath = "/" // 不去掉最后的"/"
-	} else {
-		fileInfo.AbsPath = fileFullPath[:len(fileFullPath)-len(req.FileFullName)-1] // 去掉最后的"/"
+		// 上传文件不存放到网盘根目录，例如absPath = "/456/123.txt"
+		fileInfo.FilePath = absPath[:len(absPath)-len(req.FileName)-1] // 去掉最后的"/123.txt"
 	}
 	return fileInfo
 }

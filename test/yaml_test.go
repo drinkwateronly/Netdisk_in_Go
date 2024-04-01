@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -27,8 +26,7 @@ func TestYamlParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(conf.JWTkey)
-	fmt.Println(conf.JWTkey)
+
 }
 
 func TestViper(t *testing.T) {

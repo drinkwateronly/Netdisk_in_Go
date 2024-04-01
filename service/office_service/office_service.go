@@ -202,5 +202,5 @@ func OfficeFilePreview(c *gin.Context) {
 
 		return
 	}
-	_, err = writer.Write([]byte("{\"error\":0}"))
+	//_, err = writer.Write([]byte("{\"error\":0}"))
 }

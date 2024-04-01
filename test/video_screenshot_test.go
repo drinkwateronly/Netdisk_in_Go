@@ -2,7 +2,7 @@ package test
 
 import (
 	"io"
-	"netdisk_in_go/common"
+	"netdisk_in_go/common/filehandler"
 	"os"
 	"testing"
 )
@@ -11,7 +11,7 @@ import (
 // https://zhuanlan.zhihu.com/p/118362010
 // https://github.com/BtbN/FFmpeg-Builds/releases
 func TestScreenShot(t *testing.T) {
-	reader, err := common.GetFrameFromVideo("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
+	reader, err := filehandler.GetFrameFromVideo("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestScreenShot(t *testing.T) {
 }
 
 func TestVideoClip(t *testing.T) {
-	err := common.SavePreviewFromVideo("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
+	err := filehandler.SavePreviewFromVideo("E:\\go\\netdisk_in_go\\repository\\upload_file\\4545e03b-dd30-41f1-b034-fdd2c708223e", 5)
 	if err != nil {
 		t.Fatal(err)
 	}

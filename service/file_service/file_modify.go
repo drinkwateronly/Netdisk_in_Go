@@ -267,6 +267,13 @@ func MoveFileInBatch(c *gin.Context) {
 
 			// 根据req中目的文件夹的绝对路径，查询该目的文件夹是否存在
 			destFolder, err := models.FindFolderFromAbsPath(tx, ub.UserId, req.FilePath)
+
+			if sourceFileUr.UserFileId == destFolder.UserFileId {
+				// 目的文件夹就是源文件夹，源文件夹包括目的文件夹，会导致文件夹无限嵌套
+				response.RespOKFail(writer, response.FolderLoopError, "非法操作，源文件夹包括目的文件夹")
+				return errors.New("folder loop error")
+			}
+
 			if err != nil {
 				response.RespOKFail(writer, response.FileNotExist, "目的文件夹不存在")
 				return err
@@ -293,6 +300,7 @@ func MoveFileInBatch(c *gin.Context) {
 					break
 				}
 			}
+
 			sourceFileUr.ParentId = destFolder.UserFileId
 			sourceFileUr.FilePath = req.FilePath
 
@@ -327,7 +335,7 @@ func MoveFileInBatch(c *gin.Context) {
 			prePrefixLen := len(filehandler.ConCatFileFullPath(preSourcePath, preSouceName))
 
 			// 移动文件，开始更新文件记录
-			for i := 1; i < len(allFiles); i++ {
+			for i := 0; i < len(allFiles); i++ {
 				if allFiles[i].UserFileId == destFolder.UserFileId {
 					// 目的文件夹在源文件夹中，即源文件夹包括目的文件夹，会导致文件夹无限嵌套
 					response.RespOKFail(writer, response.FolderLoopError, "非法操作，源文件夹包括目的文件夹")

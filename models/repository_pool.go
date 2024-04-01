@@ -21,9 +21,9 @@ func (RepositoryPool) TableName() string {
 	return "repository_pool"
 }
 
-func FindFileByMD5(hash string) (*RepositoryPool, bool) {
+func FindFileByMD5(tx *gorm.DB, hash string) (*RepositoryPool, bool) {
 	rp := RepositoryPool{}
-	rowsAffected := DB.Where("hash = ?", hash).Find(&rp).RowsAffected
+	rowsAffected := tx.Where("hash = ?", hash).Find(&rp).RowsAffected
 	if rowsAffected == 0 { // 文件不存在
 		return nil, false
 	}

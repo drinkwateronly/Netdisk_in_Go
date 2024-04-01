@@ -2,7 +2,7 @@ package test
 
 import (
 	"io"
-	"netdisk_in_go/common"
+	"netdisk_in_go/common/filehandler"
 	"os"
 	"testing"
 )
@@ -13,7 +13,7 @@ func TestImageCompress(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	newFile, err := common.CompressImage(file, 100, 50, "")
+	newFile, err := filehandler.CompressImage(file, 100, 50, "")
 	//newFile := common.CompressImageResource(file)
 	if err != nil {
 		panic(err)

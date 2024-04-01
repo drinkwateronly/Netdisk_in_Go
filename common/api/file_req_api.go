@@ -133,7 +133,7 @@ type FileUploadReqAPI struct {
 	// 文件哈希
 	FileMD5 string `form:"identifier"`
 	// 文件全名（文件名+拓展名）
-	FileFullName string `form:"filename"`
+	FileName string `form:"filename"`
 	// 文件存储路径
 	FilePath string `form:"filePath"`
 	// 文件存储的相对路径

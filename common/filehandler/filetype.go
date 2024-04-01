@@ -1,16 +1,18 @@
 package filehandler
 
+import "strings"
+
 const (
-	IMAGE = iota + 1
+	OTHER = iota
+	IMAGE
 	EDITABLE
 	VIDEO
 	AUDIO
 	DIRECTORY
-	OTHER
 	ROOT
 )
 
-var FileTypeId = map[string]uint8{
+var fileTypeMap = map[string]uint8{
 	"bmp":      IMAGE,
 	"jpg":      IMAGE,
 	"png":      IMAGE,
@@ -85,4 +87,10 @@ var FileTypeId = map[string]uint8{
 	"amr":      AUDIO,
 	"aac":      AUDIO,
 	"flac":     AUDIO,
+}
+
+// 根据文件拓展名获取文件类型
+func getFileType(extend string) uint8 {
+	// extend在map中的key不存在时默认为OTHER类型，即0值
+	return fileTypeMap[strings.ToLower(extend)]
 }
