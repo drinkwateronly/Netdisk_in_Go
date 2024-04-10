@@ -201,7 +201,7 @@ func BuildFileTreeIn(userId string) (*api.UserFileTreeNode, error) {
     SELECT * from user_repository where file_name="/" AND user_id = ?
     UNION ALL
     SELECT ur.* from user_repository as ur,temp t 
-	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at is NULL
+	where ur.parent_id=t.user_file_id and ur.is_dir = 1 AND ur.deleted_at = 0
 )
 select * from temp;`, userId).Find(&dirs)
 	if res.Error != nil {
@@ -419,7 +419,7 @@ SELECT * FROM user_repository where user_file_id= ? AND user_id = ?
 UNION all
 SELECT ur.* FROM user_repository 
 AS ur,temp t 
-WHERE ur.parent_id=t.user_file_id AND ur.user_id = ? AND ur.deleted_at is NULL 
+WHERE ur.parent_id=t.user_file_id AND ur.user_id = ? AND ur.deleted_at = 0 
 )SELECT * FROM temp) AS recur LEFT JOIN repository_pool AS rp ON rp.file_id = recur.file_id`,
 			userFileId, userId, userId).Find(&userReposWithSavePath)
 	}

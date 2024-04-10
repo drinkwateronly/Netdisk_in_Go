@@ -58,7 +58,11 @@ func Router() *gin.Engine {
 	fileOpGroup.POST("/batchdeletefile", file_service.DeleteFilesInBatch)
 	fileOpGroup.POST("/renamefile", file_service.RenameFile)
 	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)
-	fileOpGroup.POST("/movefile", file_service.MoveFile)
+	fileOpGroup.POST("/movefile", func(c *gin.Context) {
+		file_service.MoveFileRepost(c)
+		r.HandleContext(c) // 转发请求
+	})
+	//fileOpGroup.POST("/movefile", file_service.MoveFile)
 	fileOpGroup.POST("/batchmovefile", file_service.MoveFileInBatch)
 
 	// office
