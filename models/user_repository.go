@@ -130,7 +130,7 @@ func FindRepFileByUserFileId(db *gorm.DB, userId, userFileId string) (*Repositor
 	return &rp, true
 }
 
-// BuildFileTree 输入用户id，根据广度优先结果建立文件树，并返回根节点
+// BuildFileTree 输入用户id，根据深度优先结果建立文件树，并返回根节点
 func BuildFileTree(userId string) (*api.UserFileTreeNode, error) {
 	// 存放查询结果
 	var dirs []UserRepository
@@ -493,4 +493,13 @@ select * from temp;`, dirId, userId).Find(&dirs).Error
 		return nil, errors.New("record not found")
 	}
 	return dirs, err
+}
+
+func FindRoot(tx *gorm.DB, userId string) (*UserRepository, error) {
+	var root UserRepository
+	err := tx.Where("user_id=? AND file_name = '/'", userId).First(&root).Error
+	if err != nil {
+		return nil, err
+	}
+	return &root, nil
 }

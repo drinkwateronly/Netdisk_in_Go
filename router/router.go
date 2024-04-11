@@ -76,10 +76,10 @@ func Router() *gin.Engine {
 	// 回收站
 	recoveryGroup := r.Group("recoveryfile")
 	recoveryGroup.Use(middleware.Authentication)
-	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)
-	recoveryGroup.POST("deleterecoveryfile", recovery_service.DelRecoveryFile)
-	recoveryGroup.POST("batchdelete", recovery_service.DelRecoveryInBatch)
-	recoveryGroup.POST("restorefile", recovery_service.RestoreFile)
+	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)            // 回收站文件列表
+	recoveryGroup.POST("deleterecoveryfile", recovery_service.DelRecoveryFile) // 回收站文件删除
+	recoveryGroup.POST("batchdelete", recovery_service.DelRecoveryInBatch)     // 回收站文件批量删除
+	recoveryGroup.POST("restorefile", recovery_service.RestoreFile)            // 恢复回收站文件
 
 	// 文件分享
 	shareGroup := r.Group("share")

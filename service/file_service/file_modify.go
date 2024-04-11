@@ -48,6 +48,10 @@ func RenameFile(c *gin.Context) {
 		if err != nil {
 			return err
 		}
+		if ubs[0].FileName == req.FileName {
+			response.RespOKSuccess(writer, 0, nil, "文件名修改成功")
+			return nil
+		}
 
 		// 根据递归查询的结果来看，ubs[0]是要更名的文件
 

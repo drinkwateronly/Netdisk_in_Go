@@ -24,6 +24,7 @@ type DelRecoveryInBatchReq struct {
 	UserFileIds string `json:"userFileIds"`
 }
 
+// RecoverFileReq 回收站删除文件批次恢复请求
 type RecoverFileReq struct {
 	DeleteBatchNum string `json:"deleteBatchNum"` // 删除的批次
 	FilePath       string `json:"filePath"`       // 恢复的路径

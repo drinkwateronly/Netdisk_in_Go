@@ -8,7 +8,6 @@ import (
 
 // 回收站文件
 type RecoveryBatch struct {
-	gorm.Model
 	UserFileId    string `json:"userFileId"`
 	UserId        string `json:"userId"`
 	DeleteBatchId string `json:"deleteBatchNum"`
@@ -20,6 +19,9 @@ type RecoveryBatch struct {
 	FileSize      uint64 `json:"fileSize"`
 	DeleteTime    string `json:"deleteTime"`
 	UploadTime    string `json:"uploadTime"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
 }
 
 func (RecoveryBatch) TableName() string {
