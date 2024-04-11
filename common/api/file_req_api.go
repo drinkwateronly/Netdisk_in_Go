@@ -55,6 +55,11 @@ type MoveFileInBatchReq struct {
 	UserFileIds string `json:"userFileIds"` // 源文件的用户文件标识符
 }
 
+type CopyFileReq struct {
+	FilePath   string `json:"filePath"`    // 目标文件夹绝对路径
+	UserFileId string `json:"userFileIds"` // 源文件的用户文件标识符
+}
+
 // ----------------------------------------------------------------
 
 type UserFileTreeNode struct {

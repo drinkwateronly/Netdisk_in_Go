@@ -51,19 +51,20 @@ func Router() *gin.Engine {
 	// 文件夹操作
 	fileOpGroup := r.Group("file")
 	fileOpGroup.Use(middleware.Authentication)
-	fileOpGroup.GET("/getfilelist", file_service.GetUserFileList)
-	fileOpGroup.POST("/createFold", file_service.CreateFolder)
-	fileOpGroup.POST("/createFile", file_service.CreateFile)
-	fileOpGroup.POST("/deletefile", file_service.DeleteFile)
-	fileOpGroup.POST("/batchdeletefile", file_service.DeleteFilesInBatch)
-	fileOpGroup.POST("/renamefile", file_service.RenameFile)
-	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)
+	fileOpGroup.GET("/getfilelist", file_service.GetUserFileList)         // 获取文件列表
+	fileOpGroup.POST("/createFold", file_service.CreateFolder)            // 文件夹创建
+	fileOpGroup.POST("/createFile", file_service.CreateFile)              // 文件创建
+	fileOpGroup.POST("/deletefile", file_service.DeleteFile)              // 文件删除
+	fileOpGroup.POST("/batchdeletefile", file_service.DeleteFilesInBatch) // 文件批量删除
+	fileOpGroup.POST("/renamefile", file_service.RenameFile)              // 文件重命名
+	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)             // 文件移动
 	fileOpGroup.POST("/movefile", func(c *gin.Context) {
 		file_service.MoveFileRepost(c)
 		r.HandleContext(c) // 转发请求
 	})
 	//fileOpGroup.POST("/movefile", file_service.MoveFile)
-	fileOpGroup.POST("/batchmovefile", file_service.MoveFileInBatch)
+	fileOpGroup.POST("/batchmovefile", file_service.MoveFileInBatch) // 文件批量移动
+	fileOpGroup.POST("/copyfile", file_service.CopyFile)             // 文件复制
 
 	// office
 	officeGroup := r.Group("office")

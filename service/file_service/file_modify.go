@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io"
+	"netdisk_in_go/common"
 	"netdisk_in_go/common/api"
 	"netdisk_in_go/common/filehandler"
 	"netdisk_in_go/common/response"
@@ -74,19 +75,23 @@ func RenameFile(c *gin.Context) {
 		}
 		// 最后再修改该文件的文件名
 		ubs[0].FileName = req.FileName
-		// user_file_id重复时更新，不重复时插入，此处是为了多个记录的更新，不会插入新数据。
+		// user_file_id重复时更新，不存在时插入，此处是为了多个记录的更新，不会插入新数据。
 		res := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_file_id"}},                      // 主键id
 			DoUpdates: clause.AssignmentColumns([]string{"file_name", "file_path"}), // 要更新的列名
 		}).Create(ubs)
 
-		if res.RowsAffected == 0 {
-			// update也没有影响行数，即文件记录不存在
-			response.RespOKFail(writer, response.FileNotExist, "文件不存在")
+		if models.IsDuplicateEntryErr(res.Error) {
+			response.RespOKFail(writer, response.DatabaseError, "文件名重复")
 			return err
 		}
 		if res.Error != nil {
 			response.RespOKFail(writer, response.DatabaseError, "数据库出错")
+			return err
+		}
+		if res.RowsAffected == 0 {
+			// update也没有影响行数，即文件记录不存在
+			response.RespOKFail(writer, response.FileNotExist, "文件不存在")
 			return err
 		}
 		response.RespOKSuccess(writer, 0, nil, "文件名修改成功")
@@ -412,4 +417,147 @@ func MoveFile(c *gin.Context) {
 			return nil
 		})
 	*/
+}
+
+// CopyFile
+// @Summary 文件复制
+// @Description 实现了的单个文件或文件夹复制的接口
+// @Tags file
+// @Accept json
+// @Produce json
+// @Param req body api.CopyFileReq true "请求"
+// @Success 200 {object} response.RespData  "响应"
+// @Router /file/copyfile [POST]
+func CopyFile(c *gin.Context) {
+	writer := c.Writer
+	// 获取用户信息
+	ub, isExist := models.GetUserBasicFromContext(c)
+	if !isExist {
+		response.RespUnAuthorized(writer)
+		return
+	}
+	// 绑定请求参数
+	var req api.CopyFileReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		response.RespBadReq(writer, "请求参数错误")
+		return
+	}
+	// 用于记录复制文件的总大小
+	var totalCopySize uint64
+	err = models.DB.Transaction(func(tx *gorm.DB) error {
+		// 源文件类型是文件夹
+		var allFiles []*models.UserRepository
+		// 如果复制的文件是文件夹，则会找到该文件夹记录allFiles[0]及内部所有文件记录allFiles[1:]
+		// 如果复制的文件是文件夹，则会找到该文件记录allFiles[0]
+		allFiles, err = models.FindAllFilesFromFileId(tx, ub.UserId, req.UserFileId)
+		if err != nil {
+			response.RespOKFail(writer, response.FileNotExist, "源文件不存在")
+			return err
+		}
+		// 记录源文件复制前的信息
+		preSourceId := allFiles[0].UserFileId
+		preSourcePath := allFiles[0].FilePath
+		preSourceName := allFiles[0].FileName
+		curSourcePath := req.FilePath
+
+		// 根据req中目的文件夹的绝对路径，查询该目的文件夹是否存在
+		destFolder, err := models.FindFolderFromAbsPath(tx, ub.UserId, req.FilePath)
+		if err != nil {
+			response.RespOKFail(writer, response.FileNotExist, "目的文件夹不存在")
+			return err
+		}
+
+		// 如果目的文件夹下有和源文件同名的文件，则需要重命名源文件
+		for {
+			// 此处使用到了多列联合索引
+			res := tx.Where("user_id = ? AND parent_id = ? AND file_name = ? AND extend_name = ?",
+				ub.UserId, destFolder.UserFileId, allFiles[0].FileName, allFiles[0].ExtendName).
+				Find(&models.UserRepository{})
+			if res.Error != nil {
+				response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+				return err
+			}
+			// 有同名文件，则重新命名，添加后缀
+			if res.RowsAffected != 0 {
+				allFiles[0].FileName = filehandler.RenameConflictFile(allFiles[0].FileName)
+			} else {
+				// 直到没有同名文件
+				break
+			}
+		}
+
+		allFiles[0].UserFileId = common.GenerateUUID()
+		allFiles[0].ParentId = destFolder.UserFileId
+		allFiles[0].FilePath = req.FilePath
+		totalCopySize += allFiles[0].FileSize
+
+		// 源文件类型是文件夹
+		if allFiles[0].IsDir == 1 {
+			uuidMap := make(map[string]string)
+			// 旧和新的用户文件id映射
+			uuidMap[preSourceId] = allFiles[0].UserFileId
+
+			// 新的路径前缀
+			var newPathPrefix string
+			if req.FilePath == "/" {
+				// curSoucePath就是"/"
+				newPathPrefix = "/" + allFiles[0].FileName
+			} else {
+				newPathPrefix = curSourcePath + "/" + allFiles[0].FileName
+			}
+			// 之前的前缀长度
+			prePrefixLen := len(filehandler.ConCatFileFullPath(preSourcePath, preSourceName))
+
+			// 移动文件，开始更新文件记录
+			for i := 1; i < len(allFiles); i++ {
+				// 获取当前文件的父文件夹的新uuid
+				newParentUUID, ok := uuidMap[preSourceId]
+				newUUID := common.GenerateUUID()
+				if ok {
+					// 父文件新uuid存在
+					allFiles[i].ParentId = newParentUUID
+				} else {
+					// 父文件新uuid不存在，则生成一个，并加入到map中
+					uuidMap[allFiles[i].ParentId] = common.GenerateUUID()
+					allFiles[i].ParentId = newParentUUID
+				}
+				if allFiles[i].IsDir == 1 {
+					// 当前文件是文件夹，生成一个uuid
+					uuidMap[allFiles[i].UserFileId] = newUUID
+				}
+				// 文件新uuid
+				allFiles[i].UserFileId = newUUID
+				// 文件新路径
+				allFiles[i].FilePath = newPathPrefix + allFiles[i].FilePath[prePrefixLen:]
+				// 总共复制的文件大小
+				totalCopySize += allFiles[i].FileSize
+			}
+		}
+
+		// 计算复制后容量是否超过了用户容量
+		ub.StorageSize += totalCopySize
+		if ub.TotalStorageSize < ub.StorageSize {
+			response.RespOKFail(writer, response.StorageNotEnough, "网盘空间不足")
+			return err
+		}
+
+		// 创建新文件记录
+		err = tx.Create(allFiles).Error
+		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+			return err
+		}
+
+		// 更新用户记录
+		err = tx.Where("user_id = ?", ub.UserId).Updates(&ub).Error
+		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+			return err
+		}
+
+		// 完成
+		response.RespOKSuccess(writer, response.Success, nil, "文件移动成功")
+		return nil
+	})
 }
