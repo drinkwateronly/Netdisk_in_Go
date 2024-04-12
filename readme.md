@@ -4,6 +4,8 @@
 前端使用了开源的奇文网盘，具体部署方式参考：
 > https://github.com/qiwenshare/qiwen-file-web
 
+## 在线预览
+http://119.91.137.20:8081/
 
 ## 已完成功能
 - 用户服务

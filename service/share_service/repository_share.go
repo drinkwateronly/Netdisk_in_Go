@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"netdisk_in_go/common"
 	"netdisk_in_go/common/api"
+	"netdisk_in_go/common/filehandler"
 	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
 	"strings"
@@ -14,40 +15,44 @@ import (
 
 // FilesShare
 // @Summary 分享文件
+// @Description 生成分享文件链接与分享提取码，设置分享过期时间
 // @Accept json
 // @Produce json
-// @Param req body api_models.FileShareReq true "请求"
-// @Success 200 {object} api_models.RespDataList{datalist=[]api_models.RecoveryListResp} "服务器响应成功，根据响应code判断是否成功"
-// @Failure 400 {object} string "参数出错"
+// @Param req body api.FileShareReq true "请求"
+// @Success 200 {object} response.RespData{data=api.FileShareResp}
 // @Router /share/sharefile [POST]
 func FilesShare(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+	}
 	// 绑定请求参数
 	var req api.FileShareReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		response.RespBadReq(writer, "参数错误1")
+		response.RespBadReq(writer, "参数错误")
 		return
 	}
 
 	// 处理参数
-	endTime, err := time.Parse("2006-01-02 15:04:05", req.EndTime)
+	endTime, err := time.Parse("2006-01-02 15:04:05", req.EndTime) // 分享过期时间
 	if err != nil {
 		response.RespOK(writer, response.ReqParamNotValid, false, nil, "时间格式错误")
 		return
 	}
 	if !time.Now().Before(endTime) {
-		response.RespOK(writer, response.ShareExpired, false, nil, "分享文件已过期")
+		response.RespOKFail(writer, response.ShareExpired, "过期时间不能早于当前时间")
 		return
 	}
+
 	shareFileIds := strings.Split(req.UserFileIds, ",") // 所有分享的用户文件id
 
 	// 获取分享的用户文件记录
-	userRps, isExist := models.FindUserFilesByIds(models.DB, ub.UserId, shareFileIds)
-	if !isExist {
-		response.RespOK(writer, 9999, false, nil, "文件缺失")
+	userRps, err := models.FindUserFilesByIds(models.DB, ub.UserId, shareFileIds)
+	if err != nil {
+		response.RespOKFail(writer, response.ShareFileNotExist, "文件缺失")
 		return
 	}
 
@@ -62,9 +67,9 @@ func FilesShare(c *gin.Context) {
 
 	// 根据分享的用户文件记录，查询所有相关的文件记录
 	// 若分享文件中包含某个文件夹，则需要查询出该文件夹内的所有文件
-	// 版本1：程序递归
-	var recursive func(userRps *[]models.UserRepository, userId, curPath, shareBatchId string) []models.ShareRepository
-	recursive = func(userRps *[]models.UserRepository, userId, curPath, shareBatchId string) []models.ShareRepository {
+	// 程序递归查询函数
+	var recursive func(tx *gorm.DB, userRps *[]models.UserRepository, userId, curPath, shareBatchId string) []models.ShareRepository
+	recursive = func(tx *gorm.DB, userRps *[]models.UserRepository, userId, curPath, shareBatchId string) []models.ShareRepository {
 		var shareRps []models.ShareRepository
 		for _, userRp := range *userRps {
 			shareRps = append(shareRps,
@@ -82,13 +87,13 @@ func FilesShare(c *gin.Context) {
 			if userRp.IsDir == 1 {
 				var nextUserRps []models.UserRepository
 				var nextPath string
-				models.DB.Where("user_id = ? and parent_id = ?", userId, userRp.UserFileId).Find(&nextUserRps)
+				tx.Where("user_id = ? and parent_id = ?", userId, userRp.UserFileId).Find(&nextUserRps)
 				if curPath == "/" {
 					nextPath = "/" + userRp.FileName
 				} else {
 					nextPath = curPath + "/" + userRp.FileName
 				}
-				nextShareRps := recursive(&nextUserRps, userId, nextPath, shareBatchId)
+				nextShareRps := recursive(tx, &nextUserRps, userId, nextPath, shareBatchId)
 				shareRps = append(shareRps, nextShareRps...)
 			}
 		}
@@ -97,7 +102,7 @@ func FilesShare(c *gin.Context) {
 
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		// 版本1：程序递归，递归过程处理分享文件路径
-		//shareRps := recursive(userRps, ub.UserId, "/", shareBatchId)
+		//shareRps := recursive(tx, userRps, ub.UserId, "/", shareBatchId)
 
 		// 版本2：sql递归，递归结束处理分享文件路径
 		var shareRps []models.ShareRepository
@@ -116,14 +121,14 @@ func FilesShare(c *gin.Context) {
 				})
 				continue
 			}
-			// 是文件夹，则递归查询文件夹下的所有文件
+			// 分享的是文件夹，则递归查询文件夹下的所有文件
 			filesInFolder := make([]models.UserRepository, 0)
-			err = models.DB.Raw(`with RECURSIVE temp as
+			err = tx.Raw(`with RECURSIVE temp as
 (
-    SELECT * from user_repository where user_file_id=?
+    SELECT * from user_repository where user_file_id = ? AND deleted_at = 0
     UNION ALL
     SELECT ur.* from user_repository as ur,temp t 
-	where ur.parent_id=t.user_file_id AND ur.deleted_at is NULL
+	where ur.parent_id=t.user_file_id AND ur.deleted_at = 0
 )
 select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 			// 循环文件夹下的文件记录，
@@ -135,8 +140,10 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 				shareFilePath := "/" + fileInFolder.FilePath[removeLen:]
 				shareRps = append(shareRps, models.ShareRepository{
 					UserFileId:    fileInFolder.UserFileId,
+					ParentId:      fileInFolder.ParentId,
 					ShareBatchId:  shareBatchId,
 					ShareFilePath: shareFilePath,
+					FileId:        fileInFolder.FileId,
 					FileName:      fileInFolder.FileName,
 					ExtendName:    fileInFolder.ExtendName,
 					FileSize:      fileInFolder.FileSize,
@@ -145,101 +152,125 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 				})
 			}
 		}
-
+		// 新增分享文件库记录
 		err := tx.Create(&shareRps).Error
 		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "生成分享失败")
 			return err
 		}
+		// 新增分享批次记录
 		err = tx.Create(&models.ShareBasic{
 			UserId:         ub.UserId,
 			Salt:           salt,
 			ShareBatchId:   shareBatchId,
 			ShareType:      req.ShareType,
-			ExtractionCode: common.MakePassword(shareBatchId, salt),
+			ExtractionCode: common.MakePassword(extractionCode, salt),
 			ExpireTime:     endTime,
 		}).Error
 		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "生成分享失败")
 			return err
 		}
+
+		response.RespOKSuccess(writer, response.Success, api.FileShareResp{
+			ShareBatchId:   shareBatchId,
+			ExtractionCode: extractionCode,
+		}, "分享已生成")
 		return nil
 	})
-	if err != nil {
-		response.RespOK(writer, response.DatabaseError, false, nil, err.Error())
-		return
-	}
-	response.RespOK(writer, 0, true, gin.H{
-		"shareBatchNum":  shareBatchId,
-		"extractionCode": extractionCode,
-	}, "")
-	return
 }
 
 // CheckShareEndTime
 // @Summary 检查分享文件是否过期
 // @Accept json
 // @Produce json
-// @Param shareBatchNum query string true "分享批次id"
-// @Success 200 {object} api_models.RespData{} "服务器响应成功，根据响应code判断是否成功"
-// @Router /share/checkextractioncode [GET]
+// @Param req query api.CheckShareReq true
+// @Success 200 {object} response.RespData{}
+// @Router /share/checkendtime [GET]
 func CheckShareEndTime(c *gin.Context) {
 	writer := c.Writer
-	shareBatchId := c.Query("shareBatchNum")
-	shareBasic := models.ShareBasic{}
-	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic).Error
+	// 绑定参数
+	var req api.CheckShareReq
+	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		response.RespOK(writer, 99999, false, nil, "分享记录不存在")
+		response.RespBadReq(writer, "请求参数错误")
 		return
 	}
+	// 查询分享批次记录
+	shareBasic := models.ShareBasic{}
+	err = models.DB.Where("share_batch_id = ?", req.ShareBatchId).First(&shareBasic).Error
+	if err != nil {
+		response.RespOKFail(writer, response.ShareFileNotExist, "分享记录不存在")
+		return
+	}
+	// 检查时间
 	if shareBasic.ExpireTime.Before(time.Now()) {
-		response.RespOK(writer, 99999, false, nil, "分享已过期")
+		response.RespOKFail(writer, response.ShareExpired, "分享已过期")
 		return
 	}
-	response.RespOK(writer, 0, true, nil, "分享有效")
+	response.RespOKSuccess(writer, response.Success, nil, "分享有效")
 }
 
 // CheckShareType
 // @Summary 检查文件分享类型
 // @Accept json
 // @Produce json
-// @Param shareBatchNum query string true "分享批次id"
-// @Success 200 {object} api_models.RespData{data=api_models.CheckShareTypeResp} "服务器响应成功，根据响应code判断是否成功"
+// @Param req query api.CheckShareReq true
+// @Success 200 {object} response.RespData{data=api.CheckShareTypeResp}
 // @Router /share/sharetype [GET]
 func CheckShareType(c *gin.Context) {
 	writer := c.Writer
-	shareBatchId := c.Query("shareBatchNum")
-	shareBasic := models.ShareBasic{}
-	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic).Error
+	// 绑定请求参数
+	var req api.CheckShareReq
+	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		response.RespOK(writer, response.DatabaseError, false, nil, "分享记录不存在")
+		response.RespBadReq(writer, "请求参数错误")
 		return
 	}
-	response.RespOK(writer, response.Success, true, api.CheckShareTypeResp{ShareType: shareBasic.ShareType}, "分享类型")
+	// 查询分享批次记录
+	shareBasic := models.ShareBasic{}
+	err = models.DB.Where("share_batch_id = ?", req.ShareBatchId).First(&shareBasic).Error
+	if err != nil {
+		response.RespOKFail(writer, response.DatabaseError, "分享记录不存在")
+		return
+	}
+	//
+	response.RespOKSuccess(writer, response.Success, api.CheckShareTypeResp{
+		ShareType: shareBasic.ShareType,
+	}, "分享类型")
 }
 
 // CheckShareExtractionCode
 // @Summary 校验分享提取码
 // @Accept json
 // @Produce json
-// @Param shareBatchNum query string true "分享批次id"
-// @Success 200 {object} api_models.RespData{} "服务器响应成功，根据响应code判断是否成功"
+// @Param shareBatchNum query api.CheckExtractionCodeReq true
+// @Success 200 {object} response.RespData{}
 // @Router /share/checkextractioncode [GET]
 func CheckShareExtractionCode(c *gin.Context) {
 	writer := c.Writer
-	shareBatchId := c.Query("shareBatchNum")
-	extractionCode := c.Query("extractionCode")
-
+	// 绑定请求参数
+	var req api.CheckExtractionCodeReq
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		response.RespBadReq(writer, "请求参数错误")
+		return
+	}
+	// 查询分享批次记录
 	shareBasic := models.ShareBasic{}
-	err := models.DB.Where("share_batch_id = ?", shareBatchId).First(&shareBasic)
+	err = models.DB.Where("share_batch_id = ?", req.ShareBatchId).First(&shareBasic).Error
 	if err != nil {
 		response.RespOK(writer, response.ShareExpired, false, nil, "分享批次不存在或已过期")
 		return
 	}
 
-	if common.ValidatePassword(extractionCode, shareBasic.Salt, shareBasic.ExtractionCode) {
-		response.RespOK(writer, response.Success, true, nil, "验证成功")
+	if !common.ValidatePassword(req.ExtractionCode, shareBasic.Salt, shareBasic.ExtractionCode) {
+		response.RespOKFail(writer, response.ExtractionCodeNotValid, "提取码不正确")
 		return
 	}
-	response.RespOK(writer, response.ExtractionCodeNotValid, false, nil, "提取码出错")
+
+	response.RespOKSuccess(writer, response.Success, nil, "提取码验证成功")
+	return
 }
 
 // GetShareFileList
@@ -279,110 +310,137 @@ func GetShareFileList(c *gin.Context) {
 func SaveShareFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+	}
+	// 绑定请求参数
 	var req api.SaveShareReq
 	err := c.ShouldBind(&req)
 	if err != nil {
-		response.RespOK(writer, response.ReqParamNotValid, false, nil, "请求参数非法")
+		response.RespBadReq(writer, "请求参数非法")
 		return
 	}
-
+	// 获得所有的分享文件的id
+	userFileIds := strings.Split(req.UserFileIds, ",")
+	if len(userFileIds) == 0 {
+		response.RespOKFail(writer, response.ShareFileNotExist, "获取失败")
+		return
+	}
+	// 开启事务
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
-		// 查询父文件夹是否存在
-		parentDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
+		// 查询存放分享文件的目标文件夹是否存在
+		destDir, err := models.FindParentDirFromFilePath(tx, ub.UserId, req.FilePath)
 		if err != nil {
+			response.RespOK(writer, response.FileNotExist, false, nil, "目标文件夹不存在")
 			return err
 		}
-
-		// 获得所有的分享文件的id
-		userFileIds := strings.Split(req.UserFileIds, ",")
-		if len(userFileIds) <= 0 {
-			return errors.New("share file not found")
-		}
-
-		// 查询分享文件记录
-		var userRps []models.UserRepository
-		err = models.DB.Where("user_file_id in ?", userFileIds).Find(&userRps).Error
-		if err != nil {
-			response.RespOK(writer, 9999, false, nil, err.Error())
-			return nil
-		}
-
-		// 循环获取所有分享文件的新记录，若某个文件是文件夹，则进入文件夹获取记录
-		var recursive func(tx *gorm.DB, curFiles []models.UserRepository, parentId, curPath, userId string) *[]models.UserRepository
-		recursive = func(tx *gorm.DB, curFiles []models.UserRepository, parentId, curPath, userId string) *[]models.UserRepository {
-			var urs []models.UserRepository
-			for _, curFile := range curFiles {
-				newRecord := models.UserRepository{
-					UserFileId:    common.GenerateUUID(),
-					FileId:        curFile.FileId,
-					UserId:        userId,
-					FilePath:      curPath,
-					ParentId:      parentId,
-					FileName:      curFile.FileName,
-					ExtendName:    curFile.ExtendName,
-					FileType:      curFile.FileType,
-					IsDir:         curFile.IsDir,
-					FileSize:      curFile.FileSize,
-					ModifyTime:    time.Now().Format("2006-01-02 15:04:05"),
-					UploadTime:    time.Now().Format("2006-01-02 15:04:05"),
-					DeleteBatchId: "",
-				}
-				urs = append(urs, newRecord)
-				if curFile.IsDir == 1 { // 是文件夹
-					var nextFile []models.UserRepository
-					tx.Where("parent_id = ? and user_id = ?", curFile.UserFileId, userId).Find(&nextFile)
-					var nextPath string
-					if curPath == "/" {
-						nextPath = "/" + curFile.FileName
-					} else {
-						nextPath = curPath + "/" + curFile.FileName
-					}
-					tmp := recursive(tx, nextFile, curFile.UserFileId, nextPath, userId)
-					urs = append(urs, *tmp...)
-				}
+		// 存放要新增的用户文件记录
+		newFiles := make([]models.UserRepository, 0, len(userFileIds))
+		for _, userFileId := range userFileIds {
+			// 如果是文件夹，则找到文件夹下所有文件记录；如果是文件，则找到文件记录。
+			curShareFiles, err := models.FindAllShareFilesFromFileId(tx, req.ShareBatchNum, userFileId)
+			// 没找到文件
+			if err != nil {
+				response.RespOKFail(writer, response.ShareFileNotExist, "分享文件夹不存在")
+				return err
 			}
-			return &urs
+			// 文件名
+			prePathLen := len(curShareFiles[0].ShareFilePath)
+			newPath := req.FilePath
+			fileIdMap := make(map[string]string)
+			for i := range curShareFiles {
+				var ur models.UserRepository
+				if i == 0 {
+					// 保存分享的只有一个文件时，获取该分享
+					newUUID := common.GenerateUUID()
+					fileIdMap[curShareFiles[0].UserFileId] = newUUID
+					ur = models.UserRepository{
+						UserFileId: newUUID,                 // 新用户文件id
+						FileId:     curShareFiles[0].FileId, // 文件实际保存地址
+						UserId:     ub.UserId,               // 文件所有者
+						FilePath:   newPath,                 // 路径
+						ParentId:   destDir.UserFileId,      // 父文件夹id
+						FileName:   curShareFiles[0].FileName,
+						ExtendName: curShareFiles[0].ExtendName,
+						FileType:   curShareFiles[0].FileType,
+						IsDir:      curShareFiles[0].IsDir,
+						FileSize:   curShareFiles[0].FileSize,
+						UploadTime: time.Now().Format("2006-01-02 15:04:05"),
+					}
+				} else {
+					newUUID := common.GenerateUUID() // 文件新uuid
+					newParentId, ok := fileIdMap[curShareFiles[i].ParentId]
+					if !ok {
+						response.RespOKFail(writer, response.DatabaseError, err.Error())
+						return errors.New("parent not found")
+					}
+					ur = models.UserRepository{
+						UserFileId:    newUUID,
+						FileId:        curShareFiles[i].FileId,
+						UserId:        ub.UserId,
+						FilePath:      filehandler.ConCatFileFullPath(newPath, curShareFiles[i].ShareFilePath[prePathLen:]),
+						ParentId:      newParentId,
+						FileName:      curShareFiles[i].FileName,
+						ExtendName:    curShareFiles[i].ExtendName,
+						FileType:      curShareFiles[i].FileType,
+						IsDir:         curShareFiles[i].IsDir,
+						FileSize:      curShareFiles[i].FileSize,
+						ModifyTime:    "",
+						UploadTime:    time.Now().Format("2006-01-02 15:04:05"),
+						DeleteBatchId: "",
+					}
+					// 如果当前文件是文件夹，则记录该文件夹id的新旧映射
+					if curShareFiles[i].IsDir == 1 {
+						fileIdMap[curShareFiles[i].UserFileId] = newUUID
+					}
+				}
+				newFiles = append(newFiles, ur)
+			}
 		}
-
-		newShareFiles := recursive(tx, userRps, parentDir.UserFileId, req.FilePath, ub.UserId)
-		if len(*newShareFiles) == 0 {
-			return errors.New("share file not found")
-		}
-		if err := tx.Create(newShareFiles).Error; err != nil {
+		err = tx.Create(newFiles).Error
+		if models.IsDuplicateEntryErr(err) {
+			response.RespOKFail(writer, response.FileRepeat, "有重复文件，请更换文件存放位置")
 			return err
 		}
+		if err != nil {
+			response.RespOKFail(writer, response.DatabaseError, "有重复文件，请更换文件存放位置")
+			return err
+		}
+		response.RespOKSuccess(writer, response.Success, nil, "上传成功")
 		return nil
 	})
-	if err != nil {
-		response.RespOK(writer, 9999, false, nil, err.Error())
-		return
-	}
-	response.RespOK(writer, 0, true, nil, "上传成功")
-	return
 
 }
 
-// GetShareList
+// GetMyShareList
 // @Summary 获取用户的分享记录
+// @Description 根据分享批次和路径获取用户自己的已分享文件列表
 // @Accept json
 // @Produce json
-// @Param req query api_models.GetShareListReq true "请求"
-// @Success 200 {object} api_models.RespDataList{dataList=api_models.GetShareFileListResp} "服务器响应成功，根据响应code判断是否成功"
-// @Router /share/sharefileList [GET]
-func GetShareList(c *gin.Context) {
+// @Param req query api.GetShareListReq true "请求"
+// @Success 200 {object} response.RespDataList{dataList=api.GetShareFileListResp} "响应"
+// @Router /share/shareList [GET]
+func GetMyShareList(c *gin.Context) {
 	writer := c.Writer
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	// 获取用户信息
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+	}
+	// 绑定参数
 	var req api.GetShareListReq
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
 		response.RespOK(writer, response.ReqParamNotValid, false, nil, "请求参数非法")
 		return
 	}
-	if req.ShareFilePath != "/" {
-		response.RespOK(writer, response.NotSupport, false, nil, "暂不支持进入分享文件夹查看")
+	// 查找
+	files, total, err := models.FindMyShareList(ub.UserId, req)
+	if err != nil && !models.IsRecordNotFoundErr(err) {
+		// 允许文件记录不存在
+		response.RespOKFail(writer, response.DatabaseError, "获取失败")
 		return
 	}
-	files, total, err := models.FindShareFilesByPathAndPage(ub.UserId, req)
-	response.RespOkWithDataList(writer, response.ReqParamNotValid, files, total, "分享文件列表")
+	response.RespOkWithDataList(writer, response.Success, files, total, "分享文件列表")
 }

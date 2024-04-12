@@ -146,18 +146,3 @@ type FileUploadReqAPI struct {
 	// 文件夹，0则不是文件夹，1是文件夹。
 	IsDir uint8 `form:"isDir"`
 }
-
-// FileShareReq
-// 文件分享请求API
-type FileShareReq struct {
-	EndTime     string `form:"endTime"`     // 分享结束时长
-	Remark      string `form:"remark"`      // 未使用
-	ShareType   uint8  `form:"shareType"`   // 分享类型，有验证码时为1
-	UserFileIds string `form:"userFileIds"` // 分享的用户文件ids
-}
-
-type SaveShareReq struct {
-	FilePath      string `form:"filePath"`
-	UserFileIds   string `form:"userFileIds"`
-	ShareBatchNum string `form:"shareBatchNum"`
-}

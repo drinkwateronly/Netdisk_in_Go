@@ -30,6 +30,7 @@ var (
 
 	ShareExpired           = 60000
 	ExtractionCodeNotValid = 60001
+	ShareFileNotExist      = 60002
 
 	ReqParamNotValid = 10000
 

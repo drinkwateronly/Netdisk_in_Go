@@ -66,7 +66,7 @@ func PageQueryFilesByPath(filePath, userId string, currentPage, count uint) ([]a
 func PageQueryFilesByType(fileType uint8, userId string, currentPage, count uint) ([]api.UserFileListResp, int, error) {
 	var files []api.UserFileListResp
 	// 原本使用了.Offset().Limit()，但数据库的分页查询无法获取所有记录条数
-	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_type = ?", userId, fileType).Scan(&files).Error
+	err := DB.Model(&UserRepository{}).Where("user_id = ? and file_type = ? AND is_dir = 0", userId, fileType).Scan(&files).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -104,16 +104,19 @@ func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, 
 	return &file, nil
 }
 
-func FindUserFilesByIds(tx *gorm.DB, userId string, userFileIds []string) ([]*UserRepository, bool) {
+func FindUserFilesByIds(tx *gorm.DB, userId string, userFileIds []string) ([]*UserRepository, error) {
 	var file []*UserRepository
-	// 分页查询
-	rowsAffected := tx.Where("user_id = ? and user_file_id in ?", userId, userFileIds).
-		Find(&file).RowsAffected
-	if rowsAffected != int64(len(userFileIds)) { // 文件不存在
-		return nil, false
+
+	res := tx.Where("user_id = ? and user_file_id in ?", userId, userFileIds).
+		Find(&file)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected != int64(len(userFileIds)) { // 文件不存在
+		return nil, errors.New("file not exist")
 	}
 	// 文件存在或者出错
-	return file, true
+	return file, nil
 }
 
 // FindRepFileByUserFileId

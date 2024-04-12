@@ -102,8 +102,8 @@ func DeleteFilesInBatch(c *gin.Context) {
 	// 开启事务，删除文件
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		// 找出这些文件信息
-		urs, isExist := models.FindUserFilesByIds(tx, ub.UserId, userFileIdList)
-		if !isExist {
+		urs, err := models.FindUserFilesByIds(tx, ub.UserId, userFileIdList)
+		if err != nil {
 			return errors.New("文件不存在")
 		}
 		for i := range urs {

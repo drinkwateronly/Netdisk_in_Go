@@ -49,6 +49,7 @@ func UserRegister(c *gin.Context) {
 		}
 		// 创建用户网盘根目录记录
 		if err := tx.Create(&models.UserRepository{
+			ParentId:   common.GenerateUUID(), // 根目录没有父文件夹，仅用于防止文件记录重复
 			UserFileId: common.GenerateUUID(),
 			FileName:   "/",
 			UserId:     userId,

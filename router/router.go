@@ -88,7 +88,7 @@ func Router() *gin.Engine {
 	shareGroup.GET("/checkendtime", share_service.CheckShareEndTime)
 	shareGroup.GET("/sharetype", share_service.CheckShareType)
 	shareGroup.GET("/checkextractioncode", share_service.CheckShareExtractionCode)
-	shareGroup.GET("/shareList", share_service.GetShareList)
+	shareGroup.GET("/shareList", share_service.GetMyShareList)
 
 	shareGroup.POST("/sharefile", middleware.Authentication, share_service.FilesShare)
 	shareGroup.POST("/savesharefile", middleware.Authentication, share_service.SaveShareFile)
