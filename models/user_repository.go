@@ -96,7 +96,7 @@ func FindUserFileById(tx *gorm.DB, userId, userFileId string) (*UserRepository, 
 	var file UserRepository
 	// 分页查询
 	err := tx.Where("user_id = ? and user_file_id = ?", userId, userFileId).
-		Find(&file).Error
+		First(&file).Error
 	if err != nil { // 文件不存在
 		return nil, err
 	}

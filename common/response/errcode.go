@@ -3,6 +3,8 @@ package response
 var (
 	Success = 0
 
+	OfficePrepareSuccess = 200
+
 	Unauthorized     = 10000
 	UserNotExist     = 10001 // 用户不存在
 	WrongPassword    = 10002

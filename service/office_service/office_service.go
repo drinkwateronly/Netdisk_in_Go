@@ -3,6 +3,7 @@ package office_service
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"netdisk_in_go/common"
@@ -14,80 +15,76 @@ import (
 	"os"
 )
 
-// PreviewOfficeFile
-// 预览office文件
-func PreviewOfficeFile(c *gin.Context) {
+// PrepareOnlyOffice
+// @Summary office文件预览与编辑前的准备接口
+// @Description 点击office文件时，该接口用于获取文件信息、文件预览接口、后端回调接口以及一些OnlyOffice的基本设置，为后续编辑文件做准备
+// @Accept json
+// @Produce json
+// @Param req form api.PrepareOnlyOfficeReq true "请求"
+// @Success 200 {object} response.RespData{data=office_models.OnlyOfficeConfig} "响应"
+// @Router /office/previewofficefile [POST]
+func PrepareOnlyOffice(c *gin.Context) {
 	writer := c.Writer
 	// 从cookie获取用户信息
-	cookie, _ := c.Cookie("token")
-	uc, _ := common.ParseCookie(cookie)
-
+	cookie, err := c.Cookie("token")
+	if err != nil {
+		response.RespUnAuthorized(writer)
+		return
+	}
+	uc, err := common.ParseCookie(cookie)
+	if err != nil {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 获取用户信息
 	ub, isExist, err := models.FindUserByIdentity(models.DB, uc.UserId)
 	if !isExist {
 		response.RespBadReq(writer, "用户不存在")
 		return
 	}
-	// 处理请求参数
-	json := make(map[string]interface{})
-	err = c.ShouldBind(&json)
+	// 解析请求
+	var req api.PrepareOnlyOfficeReq
+	err = c.ShouldBindJSON(&req)
 	if err != nil {
 		response.RespBadReq(writer, "出现错误")
 		return
 	}
-	userFileId := json["userFileId"].(string)
-	// 查询用户文件基本信息
-	rb, err := models.FindUserFileById(models.DB, ub.UserId, userFileId)
+	// 查询用户文件
+	ur, err := models.FindUserFileById(models.DB, ub.UserId, req.UserFileId)
 	if err != nil {
-		response.RespBadReq(writer, "用户信息不存在")
+		response.RespOKFail(writer, response.FileNotExist, "文件不存在")
 		return
 	}
-
-	// 根据API返回必要的信息
-	// https://api.onlyoffice.com/editors/config/editor
+	// 根据API返回必要的信息, 参考：https://api.onlyoffice.com/editors/config/editor
 	document := office_models.Document{
-		FileType: rb.ExtendName, // 文件拓展名
+		FileType: ur.ExtendName, // 文件拓展名
 		Info: office_models.Info{
 			Owner:  "Me",
-			Upload: rb.UpdatedAt.Format("Mon Jan 02 2006"),
+			Upload: ur.UpdatedAt.Format("Mon Jan 02 2006"),
 		},
-		Key:         "",                                                                 // todo: 看看有无其他用法
+		Key:         common.GenerateUUID(),                                              // https://forum.onlyoffice.com/t/how-to-manage-document-key-correctly/1536
 		Permissions: office_models.DefaultPermissions,                                   // 使用默认的 Permissions
-		Title:       rb.FileName + "." + rb.ExtendName,                                  // 文件完整名
-		Url:         fmt.Sprintf(office_models.PreviewUrlFormat, rb.UserFileId, cookie), // 文件预览链接
-		UserFileId:  rb.FileId,                                                          // 文件id
+		Title:       ur.FileName + "." + ur.ExtendName,                                  // 文件完整名
+		Url:         fmt.Sprintf(office_models.PreviewUrlFormat, ur.UserFileId, cookie), // 文件预览链接
+		UserFileId:  ur.FileId,                                                          // 文件id
 	}
 	user := office_models.User{
-		Id:    uc.UserId,
-		Name:  uc.UserId,
-		Group: "",
+		Id:   uc.UserId,
+		Name: uc.Username,
 	}
-	documentType, _ := filehandler.GetOfficeDocumentType(rb.ExtendName)
-
-	response.RespOK(writer, 200, true, office_models.NewData(user, cookie, document, documentType), "获取报告成功！")
+	documentType, ok := filehandler.GetOfficeDocumentType(ur.ExtendName)
+	if !ok {
+		// 未找到文件类型
+		response.RespOKFail(writer, response.NotSupport, "文件类型不支持OnlyOffice服务")
+		return
+	}
+	response.RespOKSuccess(writer, response.OfficePrepareSuccess, office_models.NewOnlyOfficeConfig(user, cookie, document, documentType), "获取报告成功！")
 	return
 }
 
-func OfficeFileDownload(c *gin.Context) {
-	writer := c.Writer
-	file, err := os.OpenFile("123.xls", os.O_RDONLY, 0777)
-	defer file.Close()
-	_, err = io.Copy(c.Writer, file)
-	if err != nil {
-		response.RespBadReq(writer, "出现错误")
-		return
-	}
-	response.RespOK(writer, 0, true,
-		struct {
-			Error int `json:"error"`
-		}{
-			Error: 0,
-		}, "下载成功")
-}
-
 // OfficeCallback
-// @Summary OnlyOffice文件编辑的回调接口
-// @Description
+// @Summary OnlyOffice回调接口
+// @Description 用于文件编辑+文件后的
 // @Accept json
 // @Produce json
 // @Param req query api.CallbackHandler true "请求"
@@ -100,62 +97,73 @@ func OfficeCallback(c *gin.Context) {
 	// 获取post请求body中的参数
 	var callbackHandler api.OfficeCallbackReq
 	err := c.ShouldBindJSON(&callbackHandler)
-	fmt.Printf("%+v\n", callbackHandler)
-	fmt.Printf("%d\n", callbackHandler.Status)
-	//if err != nil {
-	//	return
-	//}
-	//fmt.Fprintf(gin.DefaultWriter, "%+v", callbackHandler) // 打印一下
-	//
-	//switch callbackHandler.Status {
-	//case 1: // document is being edited,
-	//	// ignore this status
-	//case 2: // document is ready for saving,
-	//
-	//case 4: // document is closed with no changes
-	//	// ignore this status
-	//case 6: // document is being edited, but the current document state is saved,
-	//	fileTempUrl := callbackHandler.Url                    // presented when status = 2, 3, 6, 7
-	//	fmt.Fprintf(gin.DefaultWriter, "%v", callbackHandler) // 打印一下
-	//	// http 请求下载临时文件
-	//	resp, err := http.Get(fileTempUrl)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	savePath := fmt.Sprintf("./repository/upload_file/%s", "test")
-	//
-	//	saveFile, err := os.OpenFile(savePath, os.O_WRONLY, 0777)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	_, err = io.Copy(saveFile, resp.Body)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	// 处理 mysql
-	//default:
-	//	/*
-	//		default for error status:
-	//			3: document saving error has occurred,
-	//			7: error has occurred while force saving the document,
-	//	*/
-	//	//ret, _ := json.Marshal(gin.H{
-	//	//	"error": 0,
-	//	//})
-	//	//_, err := writer.Write(ret)
-	//	//if err != nil {
-	//	//	panic(err)
-	//	//}
-	//	//return
-	//}
-	//ret, _ := json.Marshal(api.OfficeErrorResp{Error: 0})
-	writer.WriteHeader(http.StatusOK)
-	_, err = writer.Write([]byte("{\"error\":0}"))
 	if err != nil {
-		panic(err)
+		response.RespBadReq(writer, "请求参数错误")
+		return
 	}
 
+	switch callbackHandler.Status {
+	case 1, 4, 6:
+		/* ignore status
+		1: document is being edited,
+		4: document is closed with no changes,
+		6: document is being edited, but the current document state is saved,
+		*/
+	case 2:
+		/* saving status
+		2: document is ready for saving,
+		*/
+		// http 请求onlyoffice端下载修改后临时文件
+		fileTempUrl := callbackHandler.Url
+		fmt.Fprintf(gin.DefaultWriter, "%v", callbackHandler) // 打印一下
+		resp, err := http.Get(fileTempUrl)
+		if err != nil {
+			response.RespOKFail(writer, response.FileIOError, "临时文件下载错误")
+			return
+		}
+		// 文件修改，生成新的中心存储池id
+		fileId := common.GenerateUUID()
+		savePath := fmt.Sprintf("./repository/upload_file/%s", fileId)
+		saveFile, err := os.OpenFile(savePath, os.O_WRONLY, 0777)
+		if err != nil {
+			response.RespOKFail(writer, response.FileIOError, "临时文件下载错误")
+			return
+		}
+		n, err := io.Copy(saveFile, resp.Body)
+		if err != nil {
+			response.RespOKFail(writer, response.FileIOError, "临时文件下载错误")
+			return
+		}
+
+		// 文件下载完毕 处理mysql
+		models.DB.Transaction(func(tx *gorm.DB) error {
+			rp := models.RepositoryPool{
+				FileId: fileId,
+				Hash:   "",
+				Size:   uint64(n),
+				Path:   savePath,
+			}
+			err = tx.Create(&rp).Error
+			if err != nil {
+				response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+				return err
+			}
+			err = tx.Model(&models.UserRepository{}).Where("user_file_id = ? AND user_id = ?", callbackHandler.Key, callbackHandler.Users[0]).
+				Updates(&models.UserRepository{FileId: fileId}).Error // 只更新非0列
+			if err != nil {
+				response.RespOKFail(writer, response.DatabaseError, "DatabaseError")
+				return err
+			}
+			return nil
+		})
+	default:
+		/* default for error status:
+		3: document saving error has occurred,
+		7: error has occurred while force saving the document,
+		*/
+	}
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("{\"error\":0}"))
 }
 
 // OfficeFilePreview
@@ -199,8 +207,6 @@ func OfficeFilePreview(c *gin.Context) {
 	_, err = io.Copy(c.Writer, file)
 	if err != nil {
 		response.RespOK(writer, response.FileIOError, true, api.OfficeErrorResp{Error: 1}, "出错")
-
 		return
 	}
-	//_, err = writer.Write([]byte("{\"error\":0}"))
 }

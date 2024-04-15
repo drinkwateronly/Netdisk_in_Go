@@ -68,8 +68,7 @@ func Router() *gin.Engine {
 
 	// office
 	officeGroup := r.Group("office")
-	officeGroup.POST("/previewofficefile", office_service.PreviewOfficeFile)
-	officeGroup.GET("/filedownload", office_service.OfficeFileDownload)
+	officeGroup.POST("/previewofficefile", office_service.PrepareOnlyOffice)
 	officeGroup.GET("/preview", office_service.OfficeFilePreview)
 	officeGroup.POST("/callback", office_service.OfficeCallback)
 

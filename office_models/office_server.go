@@ -8,21 +8,13 @@ import (
 type Info struct {
 	Owner  string `json:"owner"`  // "Me"即可
 	Upload string `json:"upload"` // "上传的时间字符串"
-	//Favorite string `json:"favorite"`
 }
 
 type Permission struct {
-	Chat                 bool              `json:"chat" default:"true"`
-	Comment              bool              `json:"comment" default:"true"`
-	CommentGroup         map[string]string `json:"commentGroups"`
-	Copy                 bool              `json:"copy" default:"true"`
-	Download             bool              `json:"download" default:"true"`
-	Edit                 bool              `json:"edit"`
-	Print                bool              `json:"print" default:"true"`
-	FillForms            bool              `json:"fillForms" default:"true"`
-	ModifyFilter         bool              `json:"modifyFilter" default:"true"`
-	ModifyContentControl bool              `json:"modifyContentControl" default:"true"`
-	Review               bool              `json:"review" default:"true"`
+	Copy     bool `json:"copy"`
+	Download bool `json:"download"`
+	Edit     bool `json:"edit"`
+	Print    bool `json:"print"`
 }
 
 type Document struct {
@@ -31,44 +23,12 @@ type Document struct {
 	Key         string     `json:"key"` // key
 	Permissions Permission `json:"permissions"`
 	Title       string     `json:"title"` // "123.xlsx"
-	Url         string     `json:"url"`   // "https://netdisk.qiwenshare.com:443/filetransfer/preview?userFileId=1742499406193123328&isMin=false&shareBatchNum=undefined&extractionCode=undefined&
+	Url         string     `json:"url"`   //
 	UserFileId  string     `json:"userFileId"`
 }
 
-type Goback struct {
-}
-
-// Logo the image file at the top and left corner of the Editor header
-type Logo struct {
-	Image         string      `json:"image"`         // the path to the image file used to show in common work mode
-	ImageDark     string      `json:"imageDark"`     //
-	ImageEmbedded interface{} `json:"imageEmbedded"` // the path to the image file used to show in the emb
-	Url           string      `json:"url"`           // the absolute URL which will be used when someone clicks the
-}
-
 type Customization struct {
-	//Logo               Logo        `json:"logo"`
-	AutoSave           bool `json:"autosave" default:"true"`
-	Comments           bool `json:"comments" default:"true"`
-	CompactHeader      bool `json:"compactHeader" default:"true"`
-	CompactToolbar     bool `json:"compactToolbar" default:"true"`
-	CompatibleFeatures bool `json:"compatibleFeatures" default:"true"`
-	//ForceSave          interface{} `json:"forcesave" default:"true"`
-	//Help          bool        `json:"help" default:"true"`
-
-}
-
-type Embedded struct {
-	EmbedUrl      string `json:"embedUrl"`
-	SaveUrl       string `json:"saveUrl"`
-	ShareUrl      string `json:"shareUrl"`
-	ToolbarDocked string `json:"toolbarDocked"`
-}
-
-type Template struct {
-	Image string `json:"image"`
-	Title string `json:"title"`
-	Url   string `json:"url"`
+	ForceSave bool `json:"forcesave"`
 }
 
 type User struct {
@@ -83,34 +43,22 @@ type CoEditing struct {
 }
 
 type EditorConfig struct {
-	ActionLink    interface{}   `json:"actionLink"` // nil
 	CallbackUrl   string        `json:"callbackUrl"`
-	CoEditing     CoEditing     `json:"coEditing"`
-	CreateUrl     string        `json:"createUrl"`
 	Customization Customization `json:"customization"`
 
-	HideNotes     bool `json:"hideNotes"`
-	HideRightMenu bool `json:"hideRightMenu" default:"false"`
-	HideRulers    bool `json:"hideRuler" default:"false"`
-	SubmitForm    bool `json:"submitForm" default:"false"`
-
-	Lang      string     `json:"lang" default:"zh"`
-	Region    string     `json:"region" default:""`
-	Mode      string     `json:"mode" default:"view"`
-	User      User       `json:"user"`
-	Templates []Template `json:"templates"`
-	ForceSave bool       `json:"forcesave"`
+	Lang   string `json:"lang"`
+	Region string `json:"region"`
+	Mode   string `json:"mode"`
+	User   User   `json:"user"`
 }
 
 type File struct {
 	Document     Document     `json:"document"`
 	DocumentType string       `json:"documentType"`
 	EditorConfig EditorConfig `json:"editorConfig"`
-	Token        string       `json:"token"`
-	Type         string       `json:"type"`
 }
 
-type Data struct {
+type OnlyOfficeConfig struct {
 	File             File   `json:"file"`
 	DocserviceApiUrl string `json:"docserviceApiUrl"`
 	ReportName       string `json:"reportName"`
@@ -118,64 +66,39 @@ type Data struct {
 
 var (
 	DefaultPermissions = Permission{
-		Comment:              true,
-		Copy:                 true,
-		Download:             true,
-		Edit:                 true,
-		Print:                true,
-		FillForms:            true,
-		ModifyFilter:         true,
-		ModifyContentControl: true,
-		Review:               true,
-		Chat:                 false,
-		CommentGroup:         make(map[string]string, 0),
+		Copy:     true,
+		Download: true,
+		Edit:     true,
+		Print:    true,
 	}
 	DefaultCustomization = Customization{
-		AutoSave:           true,
-		Comments:           true,
-		CompactHeader:      true,
-		CompactToolbar:     true,
-		CompatibleFeatures: true,
-	}
-	DefaultCoEditing = CoEditing{
-		Mode:   "fast",
-		Change: true,
+		ForceSave: true, // 允许ctrl+s强制保存
 	}
 	PreviewUrlFormat = "http://172.31.226.81:8080/office/preview?userFileId=%s&token=%s"
 )
 
-func NewData(user User, token string, document Document, documentType string) *Data {
-	config := sysconfig.Config.OfficeConfig
-
+func NewOnlyOfficeConfig(user User, token string, document Document, documentType string) *OnlyOfficeConfig {
+	officeConfig := sysconfig.Config.OfficeConfig
+	//backendConfig := sysconfig.Config.
 	callbackUrl := "http://172.31.226.81:8080/office/callback"
-	createUrl := "http://172.31.226.81:8080/file/createFile"
-	docserviceApiUrl := fmt.Sprintf("http://%s:%s/web-apps/apps/api/documents/api.js", config.Host, config.Port)
-	data := Data{
+	data := OnlyOfficeConfig{
 		File: File{
 			Document:     document,
 			DocumentType: documentType,
 			EditorConfig: EditorConfig{
 				Customization: DefaultCustomization,
 				CallbackUrl:   callbackUrl,
-				CreateUrl:     createUrl,
-
-				HideNotes:     false,
-				HideRulers:    false,
-				HideRightMenu: false,
-				SubmitForm:    true,
-
-				Lang: "zh-CN",
-				//Region:      "zh",
-				Mode:      "edit",
-				ForceSave: false,
-				CoEditing: DefaultCoEditing,
-				User:      user,
+				//CreateUrl:   createUrl,
+				//Lang:          "zh-CN",
+				//Region:        "zh",
+				Mode: "edit",
+				User: user,
 			},
 
-			Token: token,
-			Type:  "desktop",
+			//Token: token,
+			//Type:  "desktop",
 		},
-		DocserviceApiUrl: docserviceApiUrl,
+		DocserviceApiUrl: fmt.Sprintf("http://%s:%s/web-apps/apps/api/documents/api.js", officeConfig.Host, officeConfig.Port), // office前端显示api
 		//ReportName:       "123",
 	}
 
