@@ -57,8 +57,8 @@ func Router() *gin.Engine {
 	fileOpGroup.POST("/deletefile", file_service.DeleteFile)              // 文件删除
 	fileOpGroup.POST("/batchdeletefile", file_service.DeleteFilesInBatch) // 文件批量删除
 	fileOpGroup.POST("/renamefile", file_service.RenameFile)              // 文件重命名
-	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)             // 文件移动
-	fileOpGroup.POST("/movefile", func(c *gin.Context) {
+	fileOpGroup.GET("/getfiletree", file_service.GetFileTree)             // 文件树
+	fileOpGroup.POST("/movefile", func(c *gin.Context) {                  // 文件移动
 		file_service.MoveFileRepost(c)
 		r.HandleContext(c) // 转发请求
 	})
@@ -75,10 +75,10 @@ func Router() *gin.Engine {
 	// 回收站
 	recoveryGroup := r.Group("recoveryfile")
 	recoveryGroup.Use(middleware.Authentication)
-	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)            // 回收站文件列表
-	recoveryGroup.POST("deleterecoveryfile", recovery_service.DelRecoveryFile) // 回收站文件删除
-	recoveryGroup.POST("batchdelete", recovery_service.DelRecoveryInBatch)     // 回收站文件批量删除
-	recoveryGroup.POST("restorefile", recovery_service.RestoreFile)            // 恢复回收站文件
+	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)             // 回收站文件列表
+	recoveryGroup.POST("/deleterecoveryfile", recovery_service.DelRecoveryFile) // 回收站文件删除
+	recoveryGroup.POST("/batchdelete", recovery_service.DelRecoveryInBatch)     // 回收站文件批量删除
+	recoveryGroup.POST("/restorefile", recovery_service.RestoreFile)            // 恢复回收站文件
 
 	// 文件分享
 	shareGroup := r.Group("share")

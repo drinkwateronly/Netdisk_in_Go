@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/createFile": {
+        "/file/batchdeletefile": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -23,7 +23,44 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "文件创建，仅支持excel，word，ppt的创建",
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件批量删除接口",
+                "parameters": [
+                    {
+                        "description": "删除的用户文件id列表",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.DeleteFileInBatchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/file/batchmovefile": {
+            "post": {
+                "description": "实现了文件批量移动的接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件批量移动",
                 "parameters": [
                     {
                         "description": "请求",
@@ -31,39 +68,150 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api_models.CreateFileReqAPI"
-                        }
-                    },
-                    {
-                        "description": "用户名",
-                        "name": "username",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "密码",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/api.MoveFileInBatchReq"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "响应",
                         "schema": {
-                            "$ref": "#/definitions/api_models.RespData"
+                            "$ref": "#/definitions/response.RespData"
                         }
-                    },
-                    "400": {
-                        "description": "参数出错",
+                    }
+                }
+            }
+        },
+        "/file/copyfile": {
+            "post": {
+                "description": "实现了的单个文件或文件夹复制的接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件复制",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/api.CopyFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/file/createFile": {
+            "post": {
+                "description": "仅支持excel，word，ppt文件的创建",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件创建",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/file/createFold": {
+            "post": {
+                "description": "创建空文件夹",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件夹创建",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.CreateFolderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/file/deletefile": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件单个删除接口",
+                "parameters": [
+                    {
+                        "description": "删除的用户文件id",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.DeleteFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -71,36 +219,169 @@ const docTemplate = `{
         },
         "/file/getfilelist": {
             "get": {
+                "description": "根据文件类型或文件路径进行分页查询用户文件列表",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "获取用户从根目录开始的文件树",
+                "tags": [
+                    "file"
+                ],
+                "summary": "获取用户文件列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "第页号",
+                        "name": "currentPage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件夹路径",
+                        "name": "filePath",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "文件类型",
+                        "name": "fileType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "pageCount",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "文件列表",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespData"
+                                    "$ref": "#/definitions/response.RespDataList"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/api_models.UserFileTreeNode"
+                                        "dataList": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/api.UserFileListResp"
+                                            }
                                         }
                                     }
                                 }
                             ]
                         }
-                    },
-                    "400": {
-                        "description": "参数出错",
+                    }
+                }
+            }
+        },
+        "/file/getfiletree": {
+            "get": {
+                "description": "文件树用于文件分享/移动/复制时选择文件夹",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "获取用户从根目录开始的文件树",
+                "responses": {
+                    "200": {
+                        "description": "文件树根节点",
                         "schema": {
-                            "type": "string"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.UserFileTreeNode"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/file/movefile": {
+            "post": {
+                "description": "实现了的文件移动的接口，未使用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件移动-实现版本",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.MoveFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/file/renamefile": {
+            "get": {
+                "description": "实现了文件重命名的接口",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "文件重命名",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "新文件名",
+                        "name": "fileName",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "要修改的文件id",
+                        "name": "userFileId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -108,118 +389,140 @@ const docTemplate = `{
         },
         "/filetransfer/batchDownloadFile": {
             "get": {
+                "description": "下载的文件为包含多个所选文件的压缩包",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "filetransfer"
                 ],
                 "summary": "文件批量下载接口",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "多个用户文件标识符，以逗号隔开",
+                        "description": "多个下载文件的用户文件标识符，以逗号分割",
                         "name": "userFileIds",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cookie",
-                        "name": "cookie",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/filetransfer/downloadfile": {
             "get": {
+                "description": "下载单个文件",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "文件单个下载接口",
+                "tags": [
+                    "filetransfer"
+                ],
+                "summary": "单个文件下载接口",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "单个用户文件标识符",
+                        "description": "单个下载文件的用户文件标识符",
                         "name": "userFileId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cookie",
-                        "name": "cookie",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/filetransfer/getstorage": {
             "get": {
+                "description": "获取用户存储容量",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "filetransfer"
                 ],
                 "summary": "获取用户存储容量",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "用户存储容量响应",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespData"
+                                    "$ref": "#/definitions/response.RespData"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/api_models.UserStorageReqAPI"
+                                            "$ref": "#/definitions/api.UserStorageResp"
                                         }
                                     }
                                 }
                             ]
                         }
-                    },
-                    "400": {
-                        "description": "cookie校验失败",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 }
             }
         },
-        "/filetransfer/uploadfile": {
-            "post": {
+        "/filetransfer/preview": {
+            "get": {
+                "description": "支持音视频等文件的在线预览",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "filetransfer"
+                ],
+                "summary": "文件预览",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "未使用",
+                        "name": "extractionCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "是否是以最低质量预览",
+                        "name": "isMin",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "未使用",
+                        "name": "shareBatchNum",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户文件标识符",
+                        "name": "userFileId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/filetransfer/uploadfile": {
+            "post": {
+                "description": "文件上传接口，获取文件分片，并组合分片",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filetransfer"
                 ],
                 "summary": "文件上传",
                 "parameters": [
@@ -229,28 +532,105 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api_models.FileUploadReqAPI"
+                            "$ref": "#/definitions/api.FileUploadReqAPI"
                         }
                     },
                     {
-                        "type": "string",
-                        "description": "Cookie",
-                        "name": "cookie",
-                        "in": "query",
+                        "type": "file",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "存储容量",
+                        "description": "响应",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/response.RespData"
                         }
+                    }
+                }
+            }
+        },
+        "/filetransfer/uploadfileprepare": {
+            "get": {
+                "description": "文件上传前的预处理，若文件已在中心存储池则进行秒传",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filetransfer"
+                ],
+                "summary": "文件上传预备",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "分片号",
+                        "name": "chunkNumber",
+                        "in": "query"
                     },
-                    "400": {
-                        "description": "参数出错",
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "分片尺寸",
+                        "name": "currentChunkSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件存储路径",
+                        "name": "filePath",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件全名（文件名+拓展名）",
+                        "name": "filename",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件哈希",
+                        "name": "identifier",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "文件夹，0则不是文件夹，1是文件夹。",
+                        "name": "isDir",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件存储的相对路径",
+                        "name": "relativePath",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "分片数量",
+                        "name": "totalChunks",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "文件总大小",
+                        "name": "totalSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -264,8 +644,151 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "unused"
+                ],
                 "summary": "获取通知列表, 暂未使用",
                 "responses": {}
+            }
+        },
+        "/office/callback": {
+            "post": {
+                "description": "对onlyoffice服务中所编辑的文件进行保存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "office"
+                ],
+                "summary": "OnlyOffice回调接口",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.OfficeCallbackReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应，成功时为文件",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.OfficeErrorResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/office/preview": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "office"
+                ],
+                "summary": "onlyoffice文件预览",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "cookie",
+                        "name": "token",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "用户文件id",
+                        "name": "userFileId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应，成功时为文件",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.OfficeErrorResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/office/previewofficefile": {
+            "post": {
+                "description": "点击office文件时，该接口用于获取文件信息、文件预览接口、后端回调接口以及一些OnlyOffice的基本设置，为后续编辑文件做准备",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "office"
+                ],
+                "summary": "office文件预览与编辑前的准备接口",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.PrepareOnlyOfficeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/office_models.OnlyOfficeConfig"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         },
         "/param/grouplist": {
@@ -276,12 +799,48 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "unused"
+                ],
                 "summary": "获取copyright, 暂未使用",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api_models.CopyrightAPI"
+                            "$ref": "#/definitions/api.CopyrightAPI"
+                        }
+                    }
+                }
+            }
+        },
+        "/recoveryfile/batchdelete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recovery"
+                ],
+                "summary": "批量删除回收站文件",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "userFileId",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.DelRecoveryInBatchReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -295,7 +854,10 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "删除多个回收站文件",
+                "tags": [
+                    "recovery"
+                ],
+                "summary": "删除单个回收站文件",
                 "parameters": [
                     {
                         "description": "用户文件id",
@@ -303,28 +865,15 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/api.DelRecoveryReq"
                         }
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cookie",
-                        "name": "cookie",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "响应",
                         "schema": {
-                            "$ref": "#/definitions/api_models.RespData"
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -338,23 +887,17 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "获取回收站文件列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Cookie",
-                        "name": "cookie",
-                        "in": "query",
-                        "required": true
-                    }
+                "tags": [
+                    "recovery"
                 ],
+                "summary": "获取回收站文件列表",
                 "responses": {
                     "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "description": "响应",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespDataList"
+                                    "$ref": "#/definitions/response.RespDataList"
                                 },
                                 {
                                     "type": "object",
@@ -362,18 +905,74 @@ const docTemplate = `{
                                         "datalist": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/api_models.RecoveryListRespAPI"
+                                                "$ref": "#/definitions/api.RecoveryListResp"
                                             }
                                         }
                                     }
                                 }
                             ]
                         }
-                    },
-                    "400": {
-                        "description": "参数出错",
+                    }
+                }
+            }
+        },
+        "/recoveryfile/restorefile": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "回收站文件恢复",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/api.RecoverFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
+                        }
+                    }
+                }
+            }
+        },
+        "/share/checkendtime": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share"
+                ],
+                "summary": "检查分享文件是否过期",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "shareBatchNum",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -387,27 +986,33 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "share"
+                ],
                 "summary": "校验分享提取码",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "分享批次id",
+                        "name": "extractionCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "name": "shareBatchNum",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "description": "resp",
                         "schema": {
-                            "$ref": "#/definitions/api_models.RespData"
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
             }
         },
-        "/share/sharefile": {
+        "/share/savesharefile": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -415,7 +1020,10 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "分享文件",
+                "tags": [
+                    "share"
+                ],
+                "summary": "保存分享文件",
                 "parameters": [
                     {
                         "description": "请求",
@@ -423,7 +1031,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api_models.FileShareReq"
+                            "$ref": "#/definitions/api.SaveShareReq"
                         }
                     }
                 ],
@@ -433,26 +1041,122 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespDataList"
+                                    "$ref": "#/definitions/response.RespDataList"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
-                                        "datalist": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/api_models.RecoveryListRespAPI"
-                                            }
+                                        "dataList": {
+                                            "$ref": "#/definitions/api.GetShareFileListResp"
                                         }
                                     }
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/share/shareList": {
+            "get": {
+                "description": "根据分享批次和路径获取用户自己的已分享文件列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share"
+                ],
+                "summary": "获取用户的分享记录",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "分享批次内路径",
+                        "name": "currentPage",
+                        "in": "query"
                     },
-                    "400": {
-                        "description": "参数出错",
+                    {
+                        "type": "integer",
+                        "name": "pageCount",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "分享批次id",
+                        "name": "shareBatchNum",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "shareFilePath",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
                         "schema": {
-                            "type": "string"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespDataList"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "dataList": {
+                                            "$ref": "#/definitions/api.GetShareFileListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/share/sharefile": {
+            "post": {
+                "description": "生成分享文件链接与分享提取码，设置分享过期时间",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share"
+                ],
+                "summary": "分享文件",
+                "parameters": [
+                    {
+                        "description": "请求",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.FileShareReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "响应",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.RespData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.FileShareResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -465,6 +1169,9 @@ const docTemplate = `{
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "share"
                 ],
                 "summary": "获取请求路径下的分享文件列表",
                 "parameters": [
@@ -483,17 +1190,17 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "description": "响应",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespDataList"
+                                    "$ref": "#/definitions/response.RespDataList"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "dataList": {
-                                            "$ref": "#/definitions/api_models.GetShareFileListResp"
+                                            "$ref": "#/definitions/api.GetShareFileListResp"
                                         }
                                     }
                                 }
@@ -511,29 +1218,30 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "share"
+                ],
                 "summary": "检查文件分享类型",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "分享批次id",
                         "name": "shareBatchNum",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "服务器响应成功，根据响应code判断是否成功",
+                        "description": "resp",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespData"
+                                    "$ref": "#/definitions/response.RespData"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/api_models.CheckShareTypeResp"
+                                            "$ref": "#/definitions/api.CheckShareTypeResp"
                                         }
                                     }
                                 }
@@ -551,30 +1259,27 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "user"
+                ],
                 "summary": "检查用户是否登录，并返回用户名，用户id。",
                 "responses": {
                     "200": {
-                        "description": "cookie",
+                        "description": "响应",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespData"
+                                    "$ref": "#/definitions/response.RespData"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/api_models.UserCheckLoginRespAPI"
+                                            "$ref": "#/definitions/api.UserCheckLoginResp"
                                         }
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
@@ -588,21 +1293,22 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "user"
+                ],
                 "summary": "用户登录，并返回cookie。",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "用户电话",
-                        "name": "telephone",
-                        "in": "query",
-                        "required": true
+                        "description": "密码",
+                        "name": "password",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "密码",
-                        "name": "password",
-                        "in": "query",
-                        "required": true
+                        "description": "电话（相当于账号）",
+                        "name": "telephone",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -611,23 +1317,17 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/api_models.RespData"
+                                    "$ref": "#/definitions/response.RespData"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/api_models.UserLoginRespAPI"
+                                            "$ref": "#/definitions/api.UserLoginResp"
                                         }
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 }
@@ -641,47 +1341,26 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "user"
+                ],
                 "summary": "用户注册",
                 "parameters": [
                     {
-                        "description": "用户电话",
-                        "name": "telephone",
+                        "description": "注册请求参数",
+                        "name": "userRegisterReq",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "用户名",
-                        "name": "username",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "密码",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/api.UserRegisterReq"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "无响应数据",
                         "schema": {
-                            "$ref": "#/definitions/api_models.RespData"
-                        }
-                    },
-                    "400": {
-                        "description": "参数出错",
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/response.RespData"
                         }
                     }
                 }
@@ -689,7 +1368,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api_models.CheckShareTypeResp": {
+        "api.CheckShareTypeResp": {
             "type": "object",
             "properties": {
                 "shareType": {
@@ -697,7 +1376,20 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.CopyrightAPI": {
+        "api.CopyFileReq": {
+            "type": "object",
+            "properties": {
+                "filePath": {
+                    "description": "目标文件夹绝对路径",
+                    "type": "string"
+                },
+                "userFileIds": {
+                    "description": "源文件的用户文件标识符",
+                    "type": "string"
+                }
+            }
+        },
+        "api.CopyrightAPI": {
             "type": "object",
             "properties": {
                 "auditDate": {
@@ -720,21 +1412,71 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.CreateFileReqAPI": {
+        "api.CreateFileReq": {
             "type": "object",
             "properties": {
                 "extendName": {
+                    "description": "扩展名",
                     "type": "string"
                 },
                 "fileName": {
+                    "description": "文件名",
                     "type": "string"
                 },
                 "filePath": {
+                    "description": "文件路径",
                     "type": "string"
                 }
             }
         },
-        "api_models.FileShareReq": {
+        "api.CreateFolderReq": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "description": "文件路径",
+                    "type": "string"
+                },
+                "filePath": {
+                    "description": "文件名",
+                    "type": "string"
+                }
+            }
+        },
+        "api.DelRecoveryInBatchReq": {
+            "type": "object",
+            "properties": {
+                "userFileIds": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.DelRecoveryReq": {
+            "type": "object",
+            "properties": {
+                "userFileId": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.DeleteFileInBatchReq": {
+            "type": "object",
+            "properties": {
+                "userFileIds": {
+                    "description": "要批量删除的文件的用户文件标识符，以逗号隔开",
+                    "type": "string"
+                }
+            }
+        },
+        "api.DeleteFileReq": {
+            "type": "object",
+            "properties": {
+                "userFileId": {
+                    "description": "要删除文件的用户文件标识符",
+                    "type": "string"
+                }
+            }
+        },
+        "api.FileShareReq": {
             "type": "object",
             "properties": {
                 "endTime": {
@@ -755,7 +1497,20 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.FileUploadReqAPI": {
+        "api.FileShareResp": {
+            "type": "object",
+            "properties": {
+                "extractionCode": {
+                    "description": "提取码",
+                    "type": "string"
+                },
+                "shareBatchNum": {
+                    "description": "分享批次",
+                    "type": "string"
+                }
+            }
+        },
+        "api.FileUploadReqAPI": {
             "type": "object",
             "properties": {
                 "chunkNumber": {
@@ -800,7 +1555,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.GetShareFileListResp": {
+        "api.GetShareFileListResp": {
             "type": "object",
             "properties": {
                 "extendName": {
@@ -829,7 +1584,100 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.RecoveryListRespAPI": {
+        "api.MoveFileInBatchReq": {
+            "type": "object",
+            "properties": {
+                "filePath": {
+                    "description": "目标文件夹绝对路径",
+                    "type": "string"
+                },
+                "userFileIds": {
+                    "description": "源文件的用户文件标识符",
+                    "type": "string"
+                }
+            }
+        },
+        "api.MoveFileReq": {
+            "type": "object",
+            "properties": {
+                "filePath": {
+                    "description": "目标文件夹绝对路径",
+                    "type": "string"
+                },
+                "userFileId": {
+                    "description": "源文件的用户文件标识符",
+                    "type": "string"
+                }
+            }
+        },
+        "api.OfficeCallbackReq": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "description": "actions:[map[type:1 userid:001]]"
+                },
+                "changeshistory": {},
+                "changesurl": {
+                    "type": "string"
+                },
+                "filetype": {
+                    "type": "string"
+                },
+                "forcesavetype": {
+                    "type": "integer"
+                },
+                "history": {},
+                "key": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "userdata": {
+                    "type": "string"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "api.OfficeErrorResp": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.PrepareOnlyOfficeReq": {
+            "type": "object",
+            "properties": {
+                "userFileId": {
+                    "description": "用户文件id",
+                    "type": "string"
+                }
+            }
+        },
+        "api.RecoverFileReq": {
+            "type": "object",
+            "properties": {
+                "deleteBatchNum": {
+                    "description": "删除的批次",
+                    "type": "string"
+                },
+                "filePath": {
+                    "description": "恢复的路径",
+                    "type": "string"
+                }
+            }
+        },
+        "api.RecoveryListResp": {
             "type": "object",
             "properties": {
                 "deleteBatchNum": {
@@ -867,64 +1715,34 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.RespData": {
+        "api.SaveShareReq": {
             "type": "object",
-            "required": [
-                "code",
-                "data",
-                "message",
-                "success"
-            ],
             "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
+                "filePath": {
                     "type": "string"
                 },
-                "success": {
-                    "type": "boolean"
+                "shareBatchNum": {
+                    "type": "string"
+                },
+                "userFileIds": {
+                    "type": "string"
                 }
             }
         },
-        "api_models.RespDataList": {
-            "type": "object",
-            "required": [
-                "code",
-                "dataList",
-                "message",
-                "success",
-                "total"
-            ],
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "dataList": {},
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "api_models.UserCheckLoginRespAPI": {
+        "api.UserCheckLoginResp": {
             "type": "object",
             "properties": {
                 "userId": {
+                    "description": "用户id",
                     "type": "string"
                 },
                 "username": {
+                    "description": "用户名",
                     "type": "string"
                 }
             }
         },
-        "api_models.UserFileListRespAPI": {
+        "api.UserFileListResp": {
             "type": "object",
             "properties": {
                 "deleteBatchNum": {
@@ -968,13 +1786,13 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.UserFileTreeNode": {
+        "api.UserFileTreeNode": {
             "type": "object",
             "properties": {
                 "children": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/api_models.UserFileTreeNode"
+                        "$ref": "#/definitions/api.UserFileTreeNode"
                     }
                 },
                 "depth": {
@@ -1001,21 +1819,216 @@ const docTemplate = `{
                 }
             }
         },
-        "api_models.UserLoginRespAPI": {
+        "api.UserLoginResp": {
             "type": "object",
             "properties": {
                 "token": {
+                    "description": "cookie",
                     "type": "string"
                 }
             }
         },
-        "api_models.UserStorageReqAPI": {
+        "api.UserRegisterReq": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "description": "密码",
+                    "type": "string"
+                },
+                "telephone": {
+                    "description": "登录时为form表单",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "用户名",
+                    "type": "string"
+                }
+            }
+        },
+        "api.UserStorageResp": {
             "type": "object",
             "properties": {
                 "storageSize": {
                     "type": "integer"
                 },
                 "totalStorageSize": {
+                    "type": "integer"
+                }
+            }
+        },
+        "office_models.Customization": {
+            "type": "object",
+            "properties": {
+                "forcesave": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "office_models.Document": {
+            "type": "object",
+            "properties": {
+                "fileType": {
+                    "type": "string"
+                },
+                "info": {
+                    "$ref": "#/definitions/office_models.Info"
+                },
+                "key": {
+                    "description": "key",
+                    "type": "string"
+                },
+                "permissions": {
+                    "$ref": "#/definitions/office_models.Permission"
+                },
+                "title": {
+                    "description": "\"123.xlsx\"",
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "userFileId": {
+                    "type": "string"
+                }
+            }
+        },
+        "office_models.EditorConfig": {
+            "type": "object",
+            "properties": {
+                "callbackUrl": {
+                    "type": "string"
+                },
+                "customization": {
+                    "$ref": "#/definitions/office_models.Customization"
+                },
+                "lang": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/office_models.User"
+                }
+            }
+        },
+        "office_models.File": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "$ref": "#/definitions/office_models.Document"
+                },
+                "documentType": {
+                    "type": "string"
+                },
+                "editorConfig": {
+                    "$ref": "#/definitions/office_models.EditorConfig"
+                }
+            }
+        },
+        "office_models.Info": {
+            "type": "object",
+            "properties": {
+                "owner": {
+                    "description": "\"Me\"即可",
+                    "type": "string"
+                },
+                "upload": {
+                    "description": "\"上传的时间字符串\"",
+                    "type": "string"
+                }
+            }
+        },
+        "office_models.OnlyOfficeConfig": {
+            "type": "object",
+            "properties": {
+                "docserviceApiUrl": {
+                    "type": "string"
+                },
+                "file": {
+                    "$ref": "#/definitions/office_models.File"
+                },
+                "reportName": {
+                    "type": "string"
+                }
+            }
+        },
+        "office_models.Permission": {
+            "type": "object",
+            "properties": {
+                "copy": {
+                    "type": "boolean"
+                },
+                "download": {
+                    "type": "boolean"
+                },
+                "edit": {
+                    "type": "boolean"
+                },
+                "print": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "office_models.User": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.RespData": {
+            "type": "object",
+            "required": [
+                "code",
+                "data",
+                "message",
+                "success"
+            ],
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "response.RespDataList": {
+            "type": "object",
+            "required": [
+                "code",
+                "dataList",
+                "message",
+                "success",
+                "total"
+            ],
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "dataList": {},
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total": {
                     "type": "integer"
                 }
             }

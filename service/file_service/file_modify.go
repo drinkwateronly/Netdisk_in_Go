@@ -22,13 +22,16 @@ import (
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param req query api.MoveFileReq true "请求"
+// @Param req query api.RenameFileReq true "请求"
 // @Success 200 {object} response.RespData "响应"
 // @Router /file/renamefile [GET]
 func RenameFile(c *gin.Context) {
 	writer := c.Writer
-	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, isExist := models.GetUserBasicFromContext(c)
+	if !isExist {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	var req api.RenameFileReq
 	err := c.ShouldBind(&req)
 	if err != nil {
@@ -287,7 +290,7 @@ func MoveFileInBatch(c *gin.Context) {
 
 // MoveFile
 // @Summary 文件移动-实现版本
-// @Description 实现了的文件移动的接口
+// @Description 实现了的文件移动的接口，未使用
 // @Tags file
 // @Accept json
 // @Produce json

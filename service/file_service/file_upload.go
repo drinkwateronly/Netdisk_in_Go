@@ -17,10 +17,12 @@ import (
 
 // FileUploadPrepare
 // @Summary 文件上传预备
+// @Description 文件上传前的预处理，若文件已在中心存储池则进行秒传
+// @Tags filetransfer
+// @Accept json
 // @Produce json
-// @Param req body api.FileUploadReqAPI true "文件上传请求"
-// @Success 200 {object} string "存储容量"
-// @Failure 400 {object} string "参数出错"
+// @Param req query api.FileUploadReqAPI true "文件上传请求"
+// @Success 200 {object} response.RespData "响应"
 // @Router /filetransfer/uploadfileprepare [GET]
 func FileUploadPrepare(c *gin.Context) {
 	writer := c.Writer
@@ -175,11 +177,15 @@ func FileUploadPrepare(c *gin.Context) {
 	}
 }
 
-// FileUpload 文件上传
 // FileUpload
 // @Summary 文件上传
+// @Description 文件上传接口，获取文件分片，并组合分片
+// @Tags filetransfer
+// @Accept json
 // @Produce json
 // @Param req body api.FileUploadReqAPI true "文件上传请求"
+// @Param file formData file true "file"
+// @Success 200 {object} response.RespData "响应"
 // @Router /filetransfer/uploadfile [POST]
 func FileUpload(c *gin.Context) {
 	var savePath string

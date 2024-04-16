@@ -9,7 +9,8 @@ import (
 
 // GetUserStorage
 // @Summary 获取用户存储容量
-// @Tags Files
+// @Description 获取用户存储容量
+// @Tags filetransfer
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.RespData{data=api.UserStorageResp} "用户存储容量响应"
@@ -17,7 +18,11 @@ import (
 func GetUserStorage(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	response.RespOKSuccess(writer, 0, api.UserStorageResp{
 		StorageSize:      ub.StorageSize,
 		TotalStorageSize: ub.TotalStorageSize,
@@ -25,7 +30,9 @@ func GetUserStorage(c *gin.Context) {
 }
 
 // GetUserFileList
-// @Summary 根据文件类型或文件路径进行分页查询用户文件列表
+// @Summary 获取用户文件列表
+// @Description 根据文件类型或文件路径进行分页查询用户文件列表
+// @Tags file
 // @Accept json
 // @Produce json
 // @Param req query api.UserFileListReq true "请求"
@@ -33,7 +40,11 @@ func GetUserStorage(c *gin.Context) {
 // @Router /file/getfilelist [GET]
 func GetUserFileList(c *gin.Context) {
 	writer := c.Writer
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 
 	// 绑定请求参数
 	var req api.UserFileListReq
@@ -63,6 +74,8 @@ func GetUserFileList(c *gin.Context) {
 
 // GetFileTree
 // @Summary 获取用户从根目录开始的文件树
+// @Description 文件树用于文件分享/移动/复制时选择文件夹
+// @Tags file
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.RespData{data=api.UserFileTreeNode} "文件树根节点"
@@ -70,7 +83,11 @@ func GetUserFileList(c *gin.Context) {
 func GetFileTree(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 获取用户文件树
 	var root *api.UserFileTreeNode
 	root, err := models.BuildFileTree(ub.UserId)

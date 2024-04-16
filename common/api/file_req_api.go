@@ -124,7 +124,6 @@ type CreateFolderReq struct {
 // ----------------------------------------------------------------
 
 // FileUploadReqAPI
-// Create or update API information request | 创建或更新API信息
 // swagger:model FileUploadReqAPI
 type FileUploadReqAPI struct {
 	// 分片号

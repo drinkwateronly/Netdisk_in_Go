@@ -17,12 +17,16 @@ import (
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param req body api.DeleteFileReq true "请求"
+// @Param req body api.DeleteFileReq true "删除的用户文件id"
 // @Success 200 {object} response.RespData "响应"
 // @Router /file/deletefile [POST]
 func DeleteFile(c *gin.Context) {
 	writer := c.Writer
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 绑定请求参数
 	var req api.DeleteFileReq
 	err := c.ShouldBind(&req)
@@ -77,12 +81,16 @@ func DeleteFile(c *gin.Context) {
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param req body api.DeleteFileInBatchReq true "请求"
+// @Param req body api.DeleteFileInBatchReq true "删除的用户文件id列表"
 // @Success 200 {object} response.RespData "响应"
 // @Router /file/batchdeletefile [POST]
 func DeleteFilesInBatch(c *gin.Context) {
 	writer := c.Writer
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 绑定请求参数
 	var req api.DeleteFileInBatchReq
 	err := c.ShouldBind(&req)

@@ -15,15 +15,20 @@ import (
 // CreateFile
 // @Summary 文件创建
 // @Description 仅支持excel，word，ppt文件的创建
+// @Tags file
 // @Accept json
 // @Produce json
 // @Param req body api.CreateFileReq true "请求"
 // @Success 200 {object} response.RespData "响应"
-// @Router /createFile [POST]
+// @Router /file/createFile [POST]
 func CreateFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 绑定请求参数
 	var req api.CreateFileReq
 	err := c.ShouldBindJSON(&req)
@@ -101,15 +106,21 @@ func CreateFile(c *gin.Context) {
 
 // CreateFolder
 // @Summary 文件夹创建
+// @Description 创建空文件夹
+// @Tags file
 // @Accept json
 // @Produce json
 // @Param req body api.CreateFolderReq true "请求"
 // @Success 200 {object} response.RespData "响应"
-// @Router /createFold [POST]
+// @Router /file/createFold [POST]
 func CreateFolder(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	var r api.CreateFolderReq
 	err := c.ShouldBind(&r)
 	if err != nil {

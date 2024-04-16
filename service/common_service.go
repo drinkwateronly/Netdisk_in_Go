@@ -8,6 +8,7 @@ import (
 
 // NoticeList
 // @Summary 获取通知列表, 暂未使用
+// @Tags unused
 // @Accept json
 // @Produce json
 // @Router /notice/list [GET]
@@ -18,6 +19,7 @@ func NoticeList(c *gin.Context) {
 
 // GetCopyright
 // @Summary 获取copyright, 暂未使用
+// @Tags unused
 // @Accept json
 // @Produce json
 // @Success 200 {object} api.CopyrightAPI{} ""

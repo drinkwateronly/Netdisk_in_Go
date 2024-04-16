@@ -16,10 +16,11 @@ import (
 // FilesShare
 // @Summary 分享文件
 // @Description 生成分享文件链接与分享提取码，设置分享过期时间
+// @Tags share
 // @Accept json
 // @Produce json
 // @Param req body api.FileShareReq true "请求"
-// @Success 200 {object} response.RespData{data=api.FileShareResp}
+// @Success 200 {object} response.RespData{data=api.FileShareResp} "响应"
 // @Router /share/sharefile [POST]
 func FilesShare(c *gin.Context) {
 	writer := c.Writer
@@ -182,10 +183,12 @@ select * from temp;`, userRp.UserFileId).Find(&filesInFolder).Error
 
 // CheckShareEndTime
 // @Summary 检查分享文件是否过期
+// @Description
+// @Tags share
 // @Accept json
 // @Produce json
-// @Param req query api.CheckShareReq true
-// @Success 200 {object} response.RespData{}
+// @Param req query api.CheckShareReq true "请求"
+// @Success 200 {object} response.RespData{} "响应"
 // @Router /share/checkendtime [GET]
 func CheckShareEndTime(c *gin.Context) {
 	writer := c.Writer
@@ -213,10 +216,12 @@ func CheckShareEndTime(c *gin.Context) {
 
 // CheckShareType
 // @Summary 检查文件分享类型
+// @Description
+// @Tags share
 // @Accept json
 // @Produce json
-// @Param req query api.CheckShareReq true
-// @Success 200 {object} response.RespData{data=api.CheckShareTypeResp}
+// @Param req query api.CheckShareReq true "req"
+// @Success 200 {object} response.RespData{data=api.CheckShareTypeResp} "resp"
 // @Router /share/sharetype [GET]
 func CheckShareType(c *gin.Context) {
 	writer := c.Writer
@@ -242,10 +247,12 @@ func CheckShareType(c *gin.Context) {
 
 // CheckShareExtractionCode
 // @Summary 校验分享提取码
+// @Description
+// @Tags share
 // @Accept json
 // @Produce json
-// @Param shareBatchNum query api.CheckExtractionCodeReq true
-// @Success 200 {object} response.RespData{}
+// @Param shareBatchNum query api.CheckExtractionCodeReq true "req"
+// @Success 200 {object} response.RespData{} "resp"
 // @Router /share/checkextractioncode [GET]
 func CheckShareExtractionCode(c *gin.Context) {
 	writer := c.Writer
@@ -275,10 +282,12 @@ func CheckShareExtractionCode(c *gin.Context) {
 
 // GetShareFileList
 // @Summary 获取请求路径下的分享文件列表
+// @Description
+// @Tags share
 // @Accept json
 // @Produce json
-// @Param req query api_models.GetShareFileListReq true "请求"
-// @Success 200 {object} api_models.RespDataList{dataList=api_models.GetShareFileListResp} "服务器响应成功，根据响应code判断是否成功"
+// @Param req query api.GetShareFileListReq true "请求"
+// @Success 200 {object} response.RespDataList{dataList=api.GetShareFileListResp} "响应"
 // @Router /share/sharefileList [GET]
 func GetShareFileList(c *gin.Context) {
 	writer := c.Writer
@@ -302,10 +311,12 @@ func GetShareFileList(c *gin.Context) {
 
 // SaveShareFile
 // @Summary 保存分享文件
+// @Description
+// @Tags share
 // @Accept json
 // @Produce json
-// @Param req query api_models.SaveShareReq true "请求"
-// @Success 200 {object} api_models.RespDataList{dataList=api_models.GetShareFileListResp} "服务器响应成功，根据响应code判断是否成功"
+// @Param req body api.SaveShareReq true "请求"
+// @Success 200 {object} response.RespDataList{dataList=api.GetShareFileListResp} "服务器响应成功，根据响应code判断是否成功"
 // @Router /share/savesharefile [POST]
 func SaveShareFile(c *gin.Context) {
 	writer := c.Writer
@@ -313,6 +324,7 @@ func SaveShareFile(c *gin.Context) {
 	ub, boo := models.GetUserBasicFromContext(c)
 	if !boo {
 		response.RespUnAuthorized(writer)
+		return
 	}
 	// 绑定请求参数
 	var req api.SaveShareReq
@@ -416,6 +428,7 @@ func SaveShareFile(c *gin.Context) {
 // GetMyShareList
 // @Summary 获取用户的分享记录
 // @Description 根据分享批次和路径获取用户自己的已分享文件列表
+// @Tags share
 // @Accept json
 // @Produce json
 // @Param req query api.GetShareListReq true "请求"
@@ -427,6 +440,7 @@ func GetMyShareList(c *gin.Context) {
 	ub, boo := models.GetUserBasicFromContext(c)
 	if !boo {
 		response.RespUnAuthorized(writer)
+		return
 	}
 	// 绑定参数
 	var req api.GetShareListReq

@@ -15,15 +15,20 @@ import (
 
 // FileDownload
 // @Summary 单个文件下载接口
+// @Description 下载单个文件
 // @Tags filetransfer
 // @Accept json
 // @Produce json
-// @Param req query api.FileDownloadReq true "请求"
+// @Param req query api.FileDownloadReq true "用户文件标识符"
 // @Router /filetransfer/downloadfile [GET]
 func FileDownload(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 
 	// 参数绑定
 	req := api.FileDownloadReq{}
@@ -92,6 +97,7 @@ func FileDownload(c *gin.Context) {
 
 // FileDownloadInBatch
 // @Summary 文件批量下载接口
+// @Description 下载的文件为包含多个所选文件的压缩包
 // @Tags filetransfer
 // @Accept json
 // @Produce json
@@ -100,7 +106,11 @@ func FileDownload(c *gin.Context) {
 func FileDownloadInBatch(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 
 	// 获取查询参数，并分割出文件id切片
 	req := api.FileDownloadInBatchReq{}
@@ -155,16 +165,21 @@ func FileDownloadInBatch(c *gin.Context) {
 
 // FilePreview
 // @Summary 文件预览
+// @Description 支持音视频等文件的在线预览
 // @Tags filetransfer
 // @Produce json
 // @Accept json
-// @Param req query api.FileDownloadInBatchReq true "请求"
+// @Param req query api.FilePreviewReq true "请求"
 // @Router /filetransfer/preview [GET]
 func FilePreview(c *gin.Context) {
 	writer := c.Writer
 
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, boo := models.GetUserBasicFromContext(c)
+	if !boo {
+		response.RespUnAuthorized(writer)
+		return
+	}
 
 	// 获取用户信息
 	ub, isExist, err := models.FindUserByIdentity(models.DB, ub.UserId)

@@ -1,10 +1,19 @@
 definitions:
-  api_models.CheckShareTypeResp:
+  api.CheckShareTypeResp:
     properties:
       shareType:
         type: integer
     type: object
-  api_models.CopyrightAPI:
+  api.CopyFileReq:
+    properties:
+      filePath:
+        description: 目标文件夹绝对路径
+        type: string
+      userFileIds:
+        description: 源文件的用户文件标识符
+        type: string
+    type: object
+  api.CopyrightAPI:
     properties:
       auditDate:
         type: string
@@ -19,16 +28,50 @@ definitions:
       project:
         type: string
     type: object
-  api_models.CreateFileReqAPI:
+  api.CreateFileReq:
     properties:
       extendName:
+        description: 扩展名
         type: string
       fileName:
+        description: 文件名
         type: string
       filePath:
+        description: 文件路径
         type: string
     type: object
-  api_models.FileShareReq:
+  api.CreateFolderReq:
+    properties:
+      fileName:
+        description: 文件路径
+        type: string
+      filePath:
+        description: 文件名
+        type: string
+    type: object
+  api.DelRecoveryInBatchReq:
+    properties:
+      userFileIds:
+        type: string
+    type: object
+  api.DelRecoveryReq:
+    properties:
+      userFileId:
+        type: string
+    type: object
+  api.DeleteFileInBatchReq:
+    properties:
+      userFileIds:
+        description: 要批量删除的文件的用户文件标识符，以逗号隔开
+        type: string
+    type: object
+  api.DeleteFileReq:
+    properties:
+      userFileId:
+        description: 要删除文件的用户文件标识符
+        type: string
+    type: object
+  api.FileShareReq:
     properties:
       endTime:
         description: 分享结束时长
@@ -43,7 +86,16 @@ definitions:
         description: 分享的用户文件ids
         type: string
     type: object
-  api_models.FileUploadReqAPI:
+  api.FileShareResp:
+    properties:
+      extractionCode:
+        description: 提取码
+        type: string
+      shareBatchNum:
+        description: 分享批次
+        type: string
+    type: object
+  api.FileUploadReqAPI:
     properties:
       chunkNumber:
         description: 分片号
@@ -77,7 +129,7 @@ definitions:
         minimum: 0
         type: integer
     type: object
-  api_models.GetShareFileListResp:
+  api.GetShareFileListResp:
     properties:
       extendName:
         type: string
@@ -96,7 +148,70 @@ definitions:
       userFileId:
         type: string
     type: object
-  api_models.RecoveryListRespAPI:
+  api.MoveFileInBatchReq:
+    properties:
+      filePath:
+        description: 目标文件夹绝对路径
+        type: string
+      userFileIds:
+        description: 源文件的用户文件标识符
+        type: string
+    type: object
+  api.MoveFileReq:
+    properties:
+      filePath:
+        description: 目标文件夹绝对路径
+        type: string
+      userFileId:
+        description: 源文件的用户文件标识符
+        type: string
+    type: object
+  api.OfficeCallbackReq:
+    properties:
+      actions:
+        description: actions:[map[type:1 userid:001]]
+      changeshistory: {}
+      changesurl:
+        type: string
+      filetype:
+        type: string
+      forcesavetype:
+        type: integer
+      history: {}
+      key:
+        type: string
+      status:
+        type: integer
+      url:
+        type: string
+      userdata:
+        type: string
+      users:
+        items:
+          type: string
+        type: array
+    type: object
+  api.OfficeErrorResp:
+    properties:
+      error:
+        type: integer
+    type: object
+  api.PrepareOnlyOfficeReq:
+    properties:
+      userFileId:
+        description: 用户文件id
+        type: string
+    type: object
+  api.RecoverFileReq:
+    properties:
+      deleteBatchNum:
+        description: 删除的批次
+        type: string
+      filePath:
+        description: 恢复的路径
+        type: string
+    type: object
+  api.RecoveryListResp:
     properties:
       deleteBatchNum:
         type: string
@@ -121,47 +236,25 @@ definitions:
       userId:
         type: string
     type: object
-  api_models.RespData:
+  api.SaveShareReq:
     properties:
-      code:
-        type: integer
-      data: {}
-      message:
+      filePath:
         type: string
-      success:
-        type: boolean
-    required:
-    - code
-    - data
-    - message
-    - success
-    type: object
-  api_models.RespDataList:
-    properties:
-      code:
-        type: integer
-      dataList: {}
-      message:
+      shareBatchNum:
         type: string
-      success:
-        type: boolean
-      total:
-        type: integer
-    required:
-    - code
-    - dataList
-    - message
-    - success
-    - total
+      userFileIds:
+        type: string
     type: object
-  api_models.UserCheckLoginRespAPI:
+  api.UserCheckLoginResp:
     properties:
       userId:
+        description: 用户id
         type: string
       username:
+        description: 用户名
         type: string
     type: object
-  api_models.UserFileListRespAPI:
+  api.UserFileListResp:
     properties:
       deleteBatchNum:
         type: string
@@ -190,11 +283,11 @@ definitions:
       userId:
         type: string
     type: object
-  api_models.UserFileTreeNode:
+  api.UserFileTreeNode:
     properties:
       children:
         items:
-          $ref: '#/definitions/api_models.UserFileTreeNode'
+          $ref: '#/definitions/api.UserFileTreeNode'
         type: array
       depth:
         type: integer
@@ -212,60 +305,305 @@ definitions:
       state:
         type: string
     type: object
-  api_models.UserLoginRespAPI:
+  api.UserLoginResp:
     properties:
       token:
+        description: cookie
         type: string
     type: object
-  api_models.UserStorageReqAPI:
+  api.UserRegisterReq:
+    properties:
+      password:
+        description: 密码
+        type: string
+      telephone:
+        description: 登录时为form表单
+        type: string
+      username:
+        description: 用户名
+        type: string
+    type: object
+  api.UserStorageResp:
     properties:
       storageSize:
         type: integer
       totalStorageSize:
         type: integer
     type: object
+  office_models.Customization:
+    properties:
+      forcesave:
+        type: boolean
+    type: object
+  office_models.Document:
+    properties:
+      fileType:
+        type: string
+      info:
+        $ref: '#/definitions/office_models.Info'
+      key:
+        description: key
+        type: string
+      permissions:
+        $ref: '#/definitions/office_models.Permission'
+      title:
+        description: '"123.xlsx"'
+        type: string
+      url:
+        type: string
+      userFileId:
+        type: string
+    type: object
+  office_models.EditorConfig:
+    properties:
+      callbackUrl:
+        type: string
+      customization:
+        $ref: '#/definitions/office_models.Customization'
+      lang:
+        type: string
+      mode:
+        type: string
+      region:
+        type: string
+      user:
+        $ref: '#/definitions/office_models.User'
+    type: object
+  office_models.File:
+    properties:
+      document:
+        $ref: '#/definitions/office_models.Document'
+      documentType:
+        type: string
+      editorConfig:
+        $ref: '#/definitions/office_models.EditorConfig'
+    type: object
+  office_models.Info:
+    properties:
+      owner:
+        description: '"Me"即可'
+        type: string
+      upload:
+        description: '"上传的时间字符串"'
+        type: string
+    type: object
+  office_models.OnlyOfficeConfig:
+    properties:
+      docserviceApiUrl:
+        type: string
+      file:
+        $ref: '#/definitions/office_models.File'
+      reportName:
+        type: string
+    type: object
+  office_models.Permission:
+    properties:
+      copy:
+        type: boolean
+      download:
+        type: boolean
+      edit:
+        type: boolean
+      print:
+        type: boolean
+    type: object
+  office_models.User:
+    properties:
+      group:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  response.RespData:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
+    required:
+    - code
+    - data
+    - message
+    - success
+    type: object
+  response.RespDataList:
+    properties:
+      code:
+        type: integer
+      dataList: {}
+      message:
+        type: string
+      success:
+        type: boolean
+      total:
+        type: integer
+    required:
+    - code
+    - dataList
+    - message
+    - success
+    - total
+    type: object
 info:
   contact: {}
 paths:
-  /createFile:
+  /file/batchdeletefile:
     post:
       consumes:
       - application/json
+      parameters:
+      - description: 删除的用户文件id列表
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.DeleteFileInBatchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件批量删除接口
+      tags:
+      - file
+  /file/batchmovefile:
+    post:
+      consumes:
+      - application/json
+      description: 实现了文件批量移动的接口
       parameters:
       - description: 请求
         in: body
         name: req
         required: true
         schema:
-          $ref: '#/definitions/api_models.CreateFileReqAPI'
-      - description: 用户名
-        in: body
-        name: username
-        required: true
-        schema:
-          type: string
-      - description: 密码
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
+          $ref: '#/definitions/api.MoveFileInBatchReq'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 响应
           schema:
-            $ref: '#/definitions/api_models.RespData'
-        "400":
-          description: 参数出错
+            $ref: '#/definitions/response.RespData'
+      summary: 文件批量移动
+      tags:
+      - file
+  /file/copyfile:
+    post:
+      consumes:
+      - application/json
+      description: 实现了的单个文件或文件夹复制的接口
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.CopyFileReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
           schema:
-            type: string
-      summary: 文件创建，仅支持excel，word，ppt的创建
+            $ref: '#/definitions/response.RespData'
+      summary: 文件复制
+      tags:
+      - file
+  /file/createFile:
+    post:
+      consumes:
+      - application/json
+      description: 仅支持excel，word，ppt文件的创建
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateFileReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件创建
+      tags:
+      - file
+  /file/createFold:
+    post:
+      consumes:
+      - application/json
+      description: 创建空文件夹
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateFolderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件夹创建
+      tags:
+      - file
+  /file/deletefile:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 删除的用户文件id
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.DeleteFileReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件单个删除接口
+      tags:
+      - file
   /file/getfilelist:
     get:
       consumes:
       - application/json
+      description: 根据文件类型或文件路径进行分页查询用户文件列表
+      parameters:
+      - description: 第页号
+        in: query
+        name: currentPage
+        type: integer
+      - description: 文件夹路径
+        in: query
+        name: filePath
+        type: string
+      - description: 文件类型
+        in: query
+        name: fileType
+        type: integer
+      - description: 每页数量
+        in: query
+        name: pageCount
+        type: integer
       produces:
       - application/json
       responses:
@@ -273,111 +611,245 @@ paths:
           description: 文件列表
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespData'
+            - $ref: '#/definitions/response.RespDataList'
             - properties:
-                data:
-                  $ref: '#/definitions/api_models.UserFileTreeNode'
+                dataList:
+                  items:
+                    $ref: '#/definitions/api.UserFileListResp'
+                  type: array
               type: object
-        "400":
-          description: 参数出错
-          schema:
-            type: string
-      summary: 获取用户从根目录开始的文件树
-  /filetransfer/batchDownloadFile:
+      summary: 获取用户文件列表
+      tags:
+      - file
+  /file/getfiletree:
     get:
-      parameters:
-      - description: 多个用户文件标识符，以逗号隔开
-        in: query
-        name: userFileIds
-        required: true
-        type: string
-      - description: Cookie
-        in: query
-        name: cookie
-        required: true
-        type: string
+      consumes:
+      - application/json
+      description: 文件树用于文件分享/移动/复制时选择文件夹
       produces:
       - application/json
       responses:
         "200":
-          description: 服务器响应成功，根据响应code判断是否成功
-          schema:
-            type: string
-        "400":
-          description: 参数出错
-          schema:
-            type: string
-      summary: 文件批量下载接口
-  /filetransfer/downloadfile:
-    get:
-      parameters:
-      - description: 单个用户文件标识符
-        in: query
-        name: userFileId
-        required: true
-        type: string
-      - description: Cookie
-        in: query
-        name: cookie
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 服务器响应成功，根据响应code判断是否成功
-          schema:
-            type: string
-        "400":
-          description: 参数出错
-          schema:
-            type: string
-      summary: 文件单个下载接口
-  /filetransfer/getstorage:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
+          description: 文件树根节点
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespData'
+            - $ref: '#/definitions/response.RespData'
             - properties:
                 data:
-                  $ref: '#/definitions/api_models.UserStorageReqAPI'
+                  $ref: '#/definitions/api.UserFileTreeNode'
               type: object
-        "400":
-          description: cookie校验失败
+      summary: 获取用户从根目录开始的文件树
+      tags:
+      - file
+  /file/movefile:
+    post:
+      consumes:
+      - application/json
+      description: 实现了的文件移动的接口，未使用
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.MoveFileReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
           schema:
-            type: string
+            $ref: '#/definitions/response.RespData'
+      summary: 文件移动-实现版本
+      tags:
+      - file
+  /file/renamefile:
+    get:
+      consumes:
+      - application/json
+      description: 实现了文件重命名的接口
+      parameters:
+      - description: 新文件名
+        in: query
+        name: fileName
+        type: string
+      - description: 要修改的文件id
+        in: query
+        name: userFileId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件重命名
+      tags:
+      - file
+  /filetransfer/batchDownloadFile:
+    get:
+      consumes:
+      - application/json
+      description: 下载的文件为包含多个所选文件的压缩包
+      parameters:
+      - description: 多个下载文件的用户文件标识符，以逗号分割
+        in: query
+        name: userFileIds
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 文件批量下载接口
+      tags:
+      - filetransfer
+  /filetransfer/downloadfile:
+    get:
+      consumes:
+      - application/json
+      description: 下载单个文件
+      parameters:
+      - description: 单个下载文件的用户文件标识符
+        in: query
+        name: userFileId
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 单个文件下载接口
+      tags:
+      - filetransfer
+  /filetransfer/getstorage:
+    get:
+      consumes:
+      - application/json
+      description: 获取用户存储容量
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户存储容量响应
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.UserStorageResp'
+              type: object
       summary: 获取用户存储容量
+      tags:
+      - filetransfer
+  /filetransfer/preview:
+    get:
+      consumes:
+      - application/json
+      description: 支持音视频等文件的在线预览
+      parameters:
+      - description: 未使用
+        in: query
+        name: extractionCode
+        type: string
+      - description: 是否是以最低质量预览
+        in: query
+        name: isMin
+        type: boolean
+      - description: 未使用
+        in: query
+        name: shareBatchNum
+        type: string
+      - description: 用户文件标识符
+        in: query
+        name: userFileId
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 文件预览
+      tags:
+      - filetransfer
   /filetransfer/uploadfile:
     post:
+      consumes:
+      - application/json
+      description: 文件上传接口，获取文件分片，并组合分片
       parameters:
       - description: 文件上传请求
         in: body
         name: req
         required: true
         schema:
-          $ref: '#/definitions/api_models.FileUploadReqAPI'
-      - description: Cookie
-        in: query
-        name: cookie
+          $ref: '#/definitions/api.FileUploadReqAPI'
+      - description: file
+        in: formData
+        name: file
         required: true
-        type: string
+        type: file
       produces:
       - application/json
       responses:
         "200":
-          description: 存储容量
+          description: 响应
           schema:
-            type: string
-        "400":
-          description: 参数出错
-          schema:
-            type: string
+            $ref: '#/definitions/response.RespData'
       summary: 文件上传
+      tags:
+      - filetransfer
+  /filetransfer/uploadfileprepare:
+    get:
+      consumes:
+      - application/json
+      description: 文件上传前的预处理，若文件已在中心存储池则进行秒传
+      parameters:
+      - description: 分片号
+        in: query
+        minimum: 0
+        name: chunkNumber
+        type: integer
+      - description: 分片尺寸
+        in: query
+        minimum: 0
+        name: currentChunkSize
+        type: integer
+      - description: 文件存储路径
+        in: query
+        name: filePath
+        type: string
+      - description: 文件全名（文件名+拓展名）
+        in: query
+        name: filename
+        type: string
+      - description: 文件哈希
+        in: query
+        name: identifier
+        type: string
+      - description: 文件夹，0则不是文件夹，1是文件夹。
+        in: query
+        name: isDir
+        type: integer
+      - description: 文件存储的相对路径
+        in: query
+        name: relativePath
+        type: string
+      - description: 分片数量
+        in: query
+        minimum: 0
+        name: totalChunks
+        type: integer
+      - description: 文件总大小
+        in: query
+        minimum: 0
+        name: totalSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 文件上传预备
+      tags:
+      - filetransfer
   /notice/list:
     get:
       consumes:
@@ -386,6 +858,90 @@ paths:
       - application/json
       responses: {}
       summary: 获取通知列表, 暂未使用
+      tags:
+      - unused
+  /office/callback:
+    post:
+      consumes:
+      - application/json
+      description: 对onlyoffice服务中所编辑的文件进行保存
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.OfficeCallbackReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应，成功时为文件
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.OfficeErrorResp'
+              type: object
+      summary: OnlyOffice回调接口
+      tags:
+      - office
+  /office/preview:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: cookie
+        in: query
+        name: token
+        type: string
+      - description: 用户文件id
+        in: query
+        name: userFileId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应，成功时为文件
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.OfficeErrorResp'
+              type: object
+      summary: onlyoffice文件预览
+      tags:
+      - office
+  /office/previewofficefile:
+    post:
+      consumes:
+      - application/json
+      description: 点击office文件时，该接口用于获取文件信息、文件预览接口、后端回调接口以及一些OnlyOffice的基本设置，为后续编辑文件做准备
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.PrepareOnlyOfficeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/office_models.OnlyOfficeConfig'
+              type: object
+      summary: office文件预览与编辑前的准备接口
+      tags:
+      - office
   /param/grouplist:
     get:
       consumes:
@@ -396,8 +952,31 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api_models.CopyrightAPI'
+            $ref: '#/definitions/api.CopyrightAPI'
       summary: 获取copyright, 暂未使用
+      tags:
+      - unused
+  /recoveryfile/batchdelete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求
+        in: body
+        name: userFileId
+        required: true
+        schema:
+          $ref: '#/definitions/api.DelRecoveryInBatchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 批量删除回收站文件
+      tags:
+      - recovery
   /recoveryfile/deleterecoveryfile:
     post:
       consumes:
@@ -408,72 +987,39 @@ paths:
         name: userFileId
         required: true
         schema:
-          type: string
-      - description: Cookie
-        in: query
-        name: cookie
-        required: true
-        type: string
+          $ref: '#/definitions/api.DelRecoveryReq'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 响应
           schema:
-            $ref: '#/definitions/api_models.RespData'
-        "400":
-          description: 参数出错
-          schema:
-            type: string
-      summary: 删除多个回收站文件
+            $ref: '#/definitions/response.RespData'
+      summary: 删除单个回收站文件
+      tags:
+      - recovery
   /recoveryfile/list:
     get:
       consumes:
       - application/json
-      parameters:
-      - description: Cookie
-        in: query
-        name: cookie
-        required: true
-        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 服务器响应成功，根据响应code判断是否成功
+          description: 响应
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespDataList'
+            - $ref: '#/definitions/response.RespDataList'
             - properties:
                 datalist:
                   items:
-                    $ref: '#/definitions/api_models.RecoveryListRespAPI'
+                    $ref: '#/definitions/api.RecoveryListResp'
                   type: array
               type: object
-        "400":
-          description: 参数出错
-          schema:
-            type: string
       summary: 获取回收站文件列表
-  /share/checkextractioncode:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: 分享批次id
-        in: query
-        name: shareBatchNum
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 服务器响应成功，根据响应code判断是否成功
-          schema:
-            $ref: '#/definitions/api_models.RespData'
-      summary: 校验分享提取码
-  /share/sharefile:
+      tags:
+      - recovery
+  /recoveryfile/restorefile:
     post:
       consumes:
       - application/json
@@ -483,7 +1029,67 @@ paths:
         name: req
         required: true
         schema:
-          $ref: '#/definitions/api_models.FileShareReq'
+          $ref: '#/definitions/api.RecoverFileReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 回收站文件恢复
+      tags:
+      - file
+  /share/checkendtime:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: shareBatchNum
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 检查分享文件是否过期
+      tags:
+      - share
+  /share/checkextractioncode:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: extractionCode
+        type: string
+      - in: query
+        name: shareBatchNum
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: resp
+          schema:
+            $ref: '#/definitions/response.RespData'
+      summary: 校验分享提取码
+      tags:
+      - share
+  /share/savesharefile:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.SaveShareReq'
       produces:
       - application/json
       responses:
@@ -491,18 +1097,76 @@ paths:
           description: 服务器响应成功，根据响应code判断是否成功
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespDataList'
+            - $ref: '#/definitions/response.RespDataList'
             - properties:
-                datalist:
-                  items:
-                    $ref: '#/definitions/api_models.RecoveryListRespAPI'
-                  type: array
+                dataList:
+                  $ref: '#/definitions/api.GetShareFileListResp'
               type: object
-        "400":
-          description: 参数出错
+      summary: 保存分享文件
+      tags:
+      - share
+  /share/shareList:
+    get:
+      consumes:
+      - application/json
+      description: 根据分享批次和路径获取用户自己的已分享文件列表
+      parameters:
+      - description: 分享批次内路径
+        in: query
+        name: currentPage
+        type: integer
+      - in: query
+        name: pageCount
+        type: integer
+      - description: 分享批次id
+        in: query
+        name: shareBatchNum
+        type: string
+      - in: query
+        name: shareFilePath
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
           schema:
-            type: string
+            allOf:
+            - $ref: '#/definitions/response.RespDataList'
+            - properties:
+                dataList:
+                  $ref: '#/definitions/api.GetShareFileListResp'
+              type: object
+      summary: 获取用户的分享记录
+      tags:
+      - share
+  /share/sharefile:
+    post:
+      consumes:
+      - application/json
+      description: 生成分享文件链接与分享提取码，设置分享过期时间
+      parameters:
+      - description: 请求
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/api.FileShareReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 响应
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.RespData'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.FileShareResp'
+              type: object
       summary: 分享文件
+      tags:
+      - share
   /share/sharefileList:
     get:
       consumes:
@@ -520,38 +1184,40 @@ paths:
       - application/json
       responses:
         "200":
-          description: 服务器响应成功，根据响应code判断是否成功
+          description: 响应
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespDataList'
+            - $ref: '#/definitions/response.RespDataList'
             - properties:
                 dataList:
-                  $ref: '#/definitions/api_models.GetShareFileListResp'
+                  $ref: '#/definitions/api.GetShareFileListResp'
               type: object
       summary: 获取请求路径下的分享文件列表
+      tags:
+      - share
   /share/sharetype:
     get:
       consumes:
       - application/json
       parameters:
-      - description: 分享批次id
-        in: query
+      - in: query
         name: shareBatchNum
-        required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 服务器响应成功，根据响应code判断是否成功
+          description: resp
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespData'
+            - $ref: '#/definitions/response.RespData'
             - properties:
                 data:
-                  $ref: '#/definitions/api_models.CheckShareTypeResp'
+                  $ref: '#/definitions/api.CheckShareTypeResp'
               type: object
       summary: 检查文件分享类型
+      tags:
+      - share
   /user/checkuserlogininfo:
     get:
       consumes:
@@ -560,33 +1226,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: cookie
+          description: 响应
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespData'
+            - $ref: '#/definitions/response.RespData'
             - properties:
                 data:
-                  $ref: '#/definitions/api_models.UserCheckLoginRespAPI'
+                  $ref: '#/definitions/api.UserCheckLoginResp'
               type: object
-        "400":
-          description: 参数出错
-          schema:
-            type: string
       summary: 检查用户是否登录，并返回用户名，用户id。
+      tags:
+      - user
   /user/login:
     get:
       consumes:
       - application/json
       parameters:
-      - description: 用户电话
-        in: query
-        name: telephone
-        required: true
-        type: string
       - description: 密码
         in: query
         name: password
-        required: true
+        type: string
+      - description: 电话（相当于账号）
+        in: query
+        name: telephone
         type: string
       produces:
       - application/json
@@ -595,49 +1257,33 @@ paths:
           description: cookie
           schema:
             allOf:
-            - $ref: '#/definitions/api_models.RespData'
+            - $ref: '#/definitions/response.RespData'
             - properties:
                 data:
-                  $ref: '#/definitions/api_models.UserLoginRespAPI'
+                  $ref: '#/definitions/api.UserLoginResp'
               type: object
-        "400":
-          description: 参数出错
-          schema:
-            type: string
       summary: 用户登录，并返回cookie。
+      tags:
+      - user
   /user/register:
     post:
       consumes:
       - application/json
       parameters:
-      - description: 用户电话
+      - description: 注册请求参数
         in: body
-        name: telephone
+        name: userRegisterReq
         required: true
         schema:
-          type: string
-      - description: 用户名
-        in: body
-        name: username
-        required: true
-        schema:
-          type: string
-      - description: 密码
-        in: body
-        name: password
-        required: true
-        schema:
-          type: string
+          $ref: '#/definitions/api.UserRegisterReq'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 无响应数据
           schema:
-            $ref: '#/definitions/api_models.RespData'
-        "400":
-          description: 参数出错
-          schema:
-            type: string
+            $ref: '#/definitions/response.RespData'
       summary: 用户注册
+      tags:
+      - user
 swagger: "2.0"

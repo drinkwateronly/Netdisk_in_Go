@@ -9,18 +9,19 @@ import (
 	"netdisk_in_go/common"
 	"netdisk_in_go/common/api"
 	"netdisk_in_go/common/filehandler"
+	"netdisk_in_go/common/office_models"
 	"netdisk_in_go/common/response"
 	"netdisk_in_go/models"
-	"netdisk_in_go/office_models"
 	"os"
 )
 
 // PrepareOnlyOffice
 // @Summary office文件预览与编辑前的准备接口
 // @Description 点击office文件时，该接口用于获取文件信息、文件预览接口、后端回调接口以及一些OnlyOffice的基本设置，为后续编辑文件做准备
+// @Tags office
 // @Accept json
 // @Produce json
-// @Param req form api.PrepareOnlyOfficeReq true "请求"
+// @Param req body api.PrepareOnlyOfficeReq true "请求"
 // @Success 200 {object} response.RespData{data=office_models.OnlyOfficeConfig} "响应"
 // @Router /office/previewofficefile [POST]
 func PrepareOnlyOffice(c *gin.Context) {
@@ -84,12 +85,13 @@ func PrepareOnlyOffice(c *gin.Context) {
 
 // OfficeCallback
 // @Summary OnlyOffice回调接口
-// @Description 用于文件编辑+文件后的
+// @Description 对onlyoffice服务中所编辑的文件进行保存
+// @Tags office
 // @Accept json
 // @Produce json
-// @Param req query api.CallbackHandler true "请求"
+// @Param req body api.OfficeCallbackReq true "请求"
 // @Success 200 {object} response.RespData{data=api.OfficeErrorResp} "响应，成功时为文件"
-// @Router /office/preview [GET]
+// @Router /office/callback [POST]
 func OfficeCallback(c *gin.Context) {
 	// callback API: https://api.onlyoffice.com/editors/callback#changesurl
 	writer := c.Writer
@@ -103,15 +105,15 @@ func OfficeCallback(c *gin.Context) {
 	}
 
 	switch callbackHandler.Status {
-	case 1, 4, 6:
+	case 1, 4:
 		/* ignore status
 		1: document is being edited,
 		4: document is closed with no changes,
-		6: document is being edited, but the current document state is saved,
 		*/
-	case 2:
+	case 2, 6:
 		/* saving status
 		2: document is ready for saving,
+		6: document is being edited, but the current document state is saved,
 		*/
 		// http 请求onlyoffice端下载修改后临时文件
 		fileTempUrl := callbackHandler.Url
@@ -169,6 +171,7 @@ func OfficeCallback(c *gin.Context) {
 // OfficeFilePreview
 // @Summary onlyoffice文件预览
 // @Description
+// @Tags office
 // @Accept json
 // @Produce json
 // @Param req query api.OfficeFilePreviewReq true "请求"

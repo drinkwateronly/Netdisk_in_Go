@@ -13,6 +13,7 @@ import (
 
 // UserRegister
 // @Summary 用户注册
+// @Tags user
 // @Accept json
 // @Produce json
 // @Param userRegisterReq body api.UserRegisterReq true "注册请求参数"
@@ -70,6 +71,7 @@ func UserRegister(c *gin.Context) {
 
 // UserLogin
 // @Summary 用户登录，并返回cookie。
+// @Tags user
 // @Accept json
 // @Produce json
 // @Param userLoginReq query api.UserLoginReq true "请求参数"
@@ -107,6 +109,7 @@ func UserLogin(c *gin.Context) {
 
 // CheckLogin
 // @Summary 检查用户是否登录，并返回用户名，用户id。
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.RespData{data=api.UserCheckLoginResp} "响应"

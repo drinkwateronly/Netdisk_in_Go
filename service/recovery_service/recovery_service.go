@@ -14,20 +14,17 @@ import (
 	"time"
 )
 
-//  回收站文件相关接口
-
 // GetRecoveryFileList
 // @Summary 获取回收站文件列表
+// @Description
+// @Tags recovery
 // @Accept json
 // @Produce json
-// @Param cookie query string true "Cookie" // 并非query参数
-// @Success 200 {object} api_models.RespDataList{datalist=[]api_models.RecoveryListResp} "服务器响应成功，根据响应code判断是否成功"
-// @Failure 400 {object} string "参数出错"
+// @Success 200 {object} response.RespDataList{datalist=[]api.RecoveryListResp} "响应"
 // @Router /recoveryfile/list [GET]
 func GetRecoveryFileList(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
-	ub := c.MustGet("userBasic").(*models.UserBasic)
 	ub, boo := models.GetUserBasicFromContext(c)
 	if !boo {
 		response.RespUnAuthorized(writer)
@@ -43,6 +40,8 @@ func GetRecoveryFileList(c *gin.Context) {
 
 // DelRecoveryFile
 // @Summary 删除单个回收站文件
+// @Description
+// @Tags recovery
 // @Accept json
 // @Produce json
 // @Param userFileId body api.DelRecoveryReq true "用户文件id"
@@ -92,6 +91,8 @@ func DelRecoveryFile(c *gin.Context) {
 
 // DelRecoveryInBatch
 // @Summary 批量删除回收站文件
+// @Description
+// @Tags recovery
 // @Accept json
 // @Produce json
 // @Param userFileId body api.DelRecoveryInBatchReq true "请求"
@@ -99,7 +100,11 @@ func DelRecoveryFile(c *gin.Context) {
 // @Router /recoveryfile/batchdelete [POST]
 func DelRecoveryInBatch(c *gin.Context) {
 	writer := c.Writer
-	ub := c.MustGet("userBasic").(*models.UserBasic)
+	ub, isExist := models.GetUserBasicFromContext(c)
+	if !isExist {
+		response.RespUnAuthorized(writer)
+		return
+	}
 	// 解析请求参数
 	var r api.DelRecoveryInBatchReq
 	err := c.ShouldBindJSON(&r)
@@ -150,13 +155,13 @@ func DelRecoveryInBatch(c *gin.Context) {
 
 // RestoreFile
 // @Summary 回收站文件恢复
-// @Description 实现了的单个文件或文件夹复制的接口
+// @Description
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param req body api.CopyFileReq true "请求"
+// @Param req body api.RecoverFileReq true "请求"
 // @Success 200 {object} response.RespData  "响应"
-// @Router /file/copyfile [POST]
+// @Router /recoveryfile/restorefile [POST]
 func RestoreFile(c *gin.Context) {
 	writer := c.Writer
 	// 获取用户信息
