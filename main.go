@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"netdisk_in_go/models"
 	"netdisk_in_go/router"
 	"netdisk_in_go/sysconfig"
@@ -25,10 +27,12 @@ func SystemInit() error {
 }
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	err := SystemInit()
 	if err != nil {
 		panic(err)
-		return
 	}
 	r := router.Router()
 	f, _ := os.Create("logger.txt")
@@ -36,6 +40,5 @@ func main() {
 	err = r.Run(":8080")
 	if err != nil {
 		panic("system run on 8080 failed")
-		return
 	}
 }

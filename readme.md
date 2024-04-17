@@ -1,28 +1,66 @@
-# 基于Gin框架的网盘后端
+# 基于go-gin+gorm的网盘后端系统
 
-在线预览地址：http://119.91.137.20:8081/login
+基于go-gin+gorm的网盘后端系统，使用了开源的奇文网盘作为前端。前端仓库地址：https://github.com/qiwenshare/qiwen-file-web
+
+本项目在线预览地址：http://119.91.137.20:8081/login
+
 - 测试账号：test1 密码 123456
 - 测试账号：test2 密码 123456
 
 首次加载会比较慢
 
 
-## 前端
 
-前端使用了开源的奇文网盘：
+## 功能
 
-> https://github.com/qiwenshare/qiwen-file-web
+基本是按照奇文网盘的前端，实现了其大部分功能，大致包括：
+
+- 用户服务
+  - 用户注册
+  - 用户登录
+  - 检查登录状态
+- 网盘文件服务
+  - 按文件路径/文件类型预览文件
+  - 文件/文件夹新建
+  - 文件/文件夹的分片上传
+  - 文件秒传
+  - 文件单个/批量下载
+    - 其中，文件批量下载包括『多个文件下载』或『单个文件夹下载』，此时下载批量文件压缩为zip形式。
+  - 文件单个/批量删除
+  - 文件单个/批量移动
+  - 文件单个/批量复制
+  - 图像音视频文件的在线预览，视频支持进度条拖动。
+  - 文件重命名
+  - 获取用户文件树，用于文件移动/保存分享/文件复制时选择存放的文件夹
+- 文件分享
+  - 创建分享连接，支持过期时间的设置
+  - 分享链接内的文件预览
+  - 分享保存
+  - 用户已分享的多次文件预览
+- 文件回收
+  - 回收站文件预览
+  - 回收站文件批量恢复
+  - 回收站文件单个/批量删除
+- OnlyOffice
+  - office文件预览
+  - office文件编辑
+
+
+
+## 本地部署
+
+### 前端
 
 前端的本地部署：
 
-1. 拉取前端仓库代码
+1. 拉取奇文网盘前端仓库代码
 2. 修改`vue.config.js`配置文件。若使用默认配置，前端将运行在`localhost:8081`，并将后端请求转发到`localhost:8080`
 3. 安装npm
-4. 进入前端主目录内，执行`npm run serve`，并访问`localhost:8081`检查前端是否部署成功
+4. 命令行进入前端项目根目录，执行`npm run serve`，并访问`localhost:8081`检查前端是否部署成功
 
 
 
-## 后端
+### 后端
 
 后端的本地部署方式：
 
@@ -30,90 +68,32 @@
 2. 进入MySQL建库建表
    1. 新建数据库：`CREATE DATABASE netdisk;`
    2. 进入数据库：`USE netdisk;`
-   3. 执行sql脚本文件建表：`source ./moedls/netdisk.sql;`，其中该sql文件位于项目根目录。
-3. 修改配置文件
-4. 命令行进入项目目录，执行`go mod tidy`
-5. 命令行执行`go run ./main.go`
+   3. 执行sql脚本文件建表：`SOURCE ./moedls/netdisk.sql;`，其中该sql文件位于本项目根目录。
+3. 安装配置OnlyOffice（可选）
+4. 修改配置文件`./config.yaml`
+5. 命令行进入项目根目录，执行`go mod tidy`
+6. 命令行执行`go run ./main.go`
+
+
 
 ## swagger
-后端部署完毕后，命令行执行`swag init`后，访问 http://localhost:8080/swagger/index.html#/ 即可查看接口文档。
 
+后端部署完毕后，命令行执行`swag init`后，访问 http://localhost:8080/swagger/index.html#/ 即可查看各接口文档。
 
-## 已完成功能
-
-- 用户服务
-  - 用户注册
-  - 用户登录
-  - 检查登录状态
-- 网盘文件服务
-  - 用户文件按路径/类型预览
-  - 文件预览
-  - 获取用户文件树，用于文件移动/保存分享
-  - 文件单个/批量下载
-  - 新建文件，文件夹
-  - 文件单个/批量删除
-  - 文件重命名
-  - 文件单个/批量移动
-- 文件分享
-  - 创建分享连接
-  - 分享保存
-- 文件回收
-  - 回收站文件批量恢复
-  - 回收站文件删除
-- OnlyOffice
-  - office文件预览
-  - office文件编辑
-
-
-
-
+<img src="https://raw.githubusercontent.com/drinkwateronly/Image-Host/main/image/image-20240417204041020.png" alt="image-20240417204041020" style="zoom:67%;" />
 
 
 
 
 ## 表设计
 
-在models文件夹下可找到建表的sql文件，各字段可见注释。
-
-### 用户信息表 `user_basic`
-
-```mysql
-CREATE TABLE `user_basic` (
-  `user_id` char(36) NOT NULL COMMENT '用户标识符',
-  `user_type` tinyint unsigned NOT NULL COMMENT '用户类型',
-  `username` varchar(64) NOT NULL COMMENT '用户名',
-  `password` varchar(64) NOT NULL COMMENT '加盐后的用户密码',
-  `phone` varchar(64) NOT NULL COMMENT '用户手机号',
-  `total_storage_size` bigint unsigned NOT NULL COMMENT '网盘总容量',
-  `storage_size` bigint unsigned NOT NULL COMMENT '网盘已用容量',
-  `salt` char(36) NOT NULL COMMENT '盐',
-  `created_at` datetime(3) DEFAULT NULL,
-  `updated_at` datetime(3) DEFAULT NULL,
-  `deleted_at` datetime(3) DEFAULT NULL,
-  PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-```
-
-### 中心存储池表 `repository_pool`
-
-管理所有真实文件（非文件夹）的存储位置
-
-```mysql
-CREATE TABLE `repository_pool` (
-  `file_id` char(36) NOT NULL COMMENT '文件标识符',
-  `hash` char(32) NOT NULL COMMENT '文件哈希',
-  `size` bigint unsigned NOT NULL DEFAULT '0' COMMENT '文件大小',
-  `path` varchar(256) NOT NULL COMMENT '文件的本地存储地址/对象存储路径',
-  `created_at` datetime(3) DEFAULT NULL,
-  `updated_at` datetime(3) DEFAULT NULL,
-  `deleted_at` datetime(3) DEFAULT NULL,
-  PRIMARY KEY (`file_id`),
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-```
+![image-20240417203530275](https://raw.githubusercontent.com/drinkwateronly/Image-Host/main/image/image-20240417203530275.png)
 
 ### 用户文件表 `user_repository`
 
-记录用户网盘内文件/文件夹信息，维护用户网盘的文件逻辑，用户文件记录通过`file_id`字段指向中心存储池表记录。
+其中，较为重要的表为用户文件表，用于维护用户网盘的树型基本逻辑，记录用户网盘内文件/文件夹信息。
+- 字段`user_file_id`作为主键索引，
+- 字段(`parent_id`,`file_name`,`extend_name`,`is_dir`,`deleted_at`)作为唯一联合索引，用于快速定位某文件，并防止用户文件重复
 
 ```mysql
 CREATE TABLE `user_repository` (
@@ -138,14 +118,13 @@ CREATE TABLE `user_repository` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
-- 字段`user_file_id`作为主键索引，
-- 字段(`parent_id`,`file_name`,`extend_name`,`is_dir`,`deleted_at`)作为唯一联合索引，用于快速定位某文件，并防止用户文件重复
 
 
 
 
+## todo
 
-
+- 目前文件存放在磁盘，考虑引入OSS
 
 
 

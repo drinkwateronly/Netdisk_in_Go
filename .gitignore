@@ -3,6 +3,6 @@ test/image
 test/video
 test/zip
 logger.txt
-./cloc.exe
+#./cloc.exe
 ./logger.txt
 ./main
