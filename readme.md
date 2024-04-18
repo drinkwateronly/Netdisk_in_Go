@@ -3,11 +3,12 @@
 基于go-gin+gorm的网盘后端系统，使用了开源的奇文网盘作为前端。前端仓库地址：https://github.com/qiwenshare/qiwen-file-web
 
 本项目在线预览地址：http://119.91.137.20:8081/login
+首次加载会比较慢
 
 - 测试账号：test1 密码 123456
 - 测试账号：test2 密码 123456
 
-首次加载会比较慢
+由于使用了内存仅有2G的轻量级服务器，部署OnlyOffice内存占用较大，启动后系统剩余内存不足100M，因此在线预览中没有启动OnlyOffice的服务。
 
 
 
