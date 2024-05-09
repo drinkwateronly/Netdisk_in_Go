@@ -5,20 +5,25 @@ import (
 )
 
 type ConfigModel struct {
-	CookieExpireTime int          `mapstructure:"cookieExpiredTime"` // cookie时长
-	JWTConfig        JWTConfig    `mapstructure:"JWT"`               // jwt密钥
-	MysqlConfig      MysqlConfig  `mapstructure:"mysql"`             // mysql连接配置
-	OfficeConfig     OfficeConfig `mapstructure:"office"`            // onlyoffice配置
+	NetDiskConfig netDiskConfig `mapstructure:"netdisk"` // jwt密钥
+	MysqlConfig   mysqlConfig   `mapstructure:"mysql"`   // mysql连接配置
+	OfficeConfig  officeConfig  `mapstructure:"office"`  // onlyoffice配置
 }
 
-type JWTConfig struct {
+type netDiskConfig struct {
+	Port        string    `mapstructure:"port"`        //
+	JWTConfig   jwtConfig `mapstructure:"jwt"`         // jwt
+	StorageSize uint64    `mapstructure:"storageSize"` //
+}
+
+type jwtConfig struct {
 	Key            string `mapstructure:"key"`            //
 	Issuer         string `mapstructure:"issuer"`         //
 	CookieDuration int    `mapstructure:"cookieDuration"` //
 }
 
 // MysqlConfig 连接mysql的设置
-type MysqlConfig struct {
+type mysqlConfig struct {
 	User   string `mapstructure:"user"`
 	Pwd    string `mapstructure:"password"`
 	DBName string `mapstructure:"dbname"`
@@ -26,7 +31,8 @@ type MysqlConfig struct {
 	Port   string `mapstructure:"port"`
 }
 
-type OfficeConfig struct {
+// OnlyOffice 服务配置
+type officeConfig struct {
 	Host string `mapstructure:"host"`
 	Port string `mapstructure:"port"`
 }

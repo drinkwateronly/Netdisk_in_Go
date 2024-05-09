@@ -1,13 +1,16 @@
+netdisk:
+  port: "8080" # 后端端口
+  JWT:
+    key: "this-is-a-JWT-key" # 非重要参数
+    issuer: "issuer"  # 非重要参数，jwt签发者
+    cookieDuration: 36000 # cookie有效时间，秒为单位
+  storageSize:  10240000000 # 用户注册时的网盘容量，默认为10GB
 mysql:
+  host: "172.31.226.34" # mysql服务ip地址
+  port: "3306" # mysql服务端口
   user: "root"  # 数据库账号
   password: "123"  # 数据库密码
   dbname: "netdisk" # 数据库名称
-  host: "172.31.226.34" # mysql服务ip地址
-  port: "3306" # mysql服务端口
 office:
   host: "172.31.226.34" # OnlyOffice服务ip地址
   port: "9696" # OnlyOffice服务端口
-JWT:
-  key: "this-is-a-JWT-key" # 非重要参数
-  issuer: "issuer"  # 非重要参数
-  cookieDuration: 36000 # cookie有效时间，秒为单位

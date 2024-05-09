@@ -14,7 +14,8 @@ type RepositoryPool struct {
 	FileId    string
 	Hash      string
 	Size      uint64
-	Path      string
+	LocalPath string
+	OSSPath   string
 }
 
 func (RepositoryPool) TableName() string {

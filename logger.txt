@@ -1,4 +1,100 @@
-[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
-Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
-[GIN-debug] Listening and serving HTTP on :8080
-{[map[type:2 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/7069ef34-390d-4cd6-807f-6eea2b8f4761_8913/changes.zip/changes.zip?md5=A9hU3ScnI9wG5Bm0ynVboA&expires=1713359332&filename=changes.zip docx 1 map[changes:[map[created:2024-04-17 12:53:49 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] 7069ef34-390d-4cd6-807f-6eea2b8f4761 6 http://172.31.226.34:9696/cache/files/7069ef34-390d-4cd6-807f-6eea2b8f4761_8913/output.docx/output.docx?md5=ziz0FWjZ40Pv1IigjyhhPA&expires=1713359332&filename=output.docx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}{[map[type:0 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/7069ef34-390d-4cd6-807f-6eea2b8f4761_3739/changes.zip/changes.zip?md5=WILHrvCDdmTGvqg8i7J07g&expires=1713359340&filename=changes.zip docx 0 map[changes:[map[created:2024-04-17 12:53:49 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] 7069ef34-390d-4cd6-807f-6eea2b8f4761 2 http://172.31.226.34:9696/cache/files/7069ef34-390d-4cd6-807f-6eea2b8f4761_3739/output.docx/output.docx?md5=KpsGtI3Uq9oTU9-mlIF_tQ&expires=1713359340&filename=output.docx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}{[map[type:2 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/50d4c662-426a-4007-8814-f9af9fb03bb2_4118/changes.zip/changes.zip?md5=pZ06ow8llUjceWCnDN4A_g&expires=1713359359&filename=changes.zip xlsx 1 map[changes:[map[created:2024-04-17 12:54:17 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] 50d4c662-426a-4007-8814-f9af9fb03bb2 6 http://172.31.226.34:9696/cache/files/50d4c662-426a-4007-8814-f9af9fb03bb2_4118/output.xlsx/output.xlsx?md5=SYz4NIK6OL7-qwd-HcowNg&expires=1713359359&filename=output.xlsx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}{[map[type:2 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/a2131f5d-ac98-4788-8f36-9e1958940cbc_8444/changes.zip/changes.zip?md5=3amh6597tJDCcSs67sm03Q&expires=1713359366&filename=changes.zip xlsx 1 map[changes:[map[created:2024-04-17 12:54:24 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] a2131f5d-ac98-4788-8f36-9e1958940cbc 6 http://172.31.226.34:9696/cache/files/a2131f5d-ac98-4788-8f36-9e1958940cbc_8444/output.xlsx/output.xlsx?md5=OGrmxLbREEQRHIWJLkjyYQ&expires=1713359366&filename=output.xlsx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}{[map[type:0 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/50d4c662-426a-4007-8814-f9af9fb03bb2_9828/changes.zip/changes.zip?md5=MDEYJZsl7_zA0wmKo_uG5w&expires=1713359367&filename=changes.zip xlsx 0 map[changes:[map[created:2024-04-17 12:54:17 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] 50d4c662-426a-4007-8814-f9af9fb03bb2 2 http://172.31.226.34:9696/cache/files/50d4c662-426a-4007-8814-f9af9fb03bb2_9828/output.xlsx/output.xlsx?md5=FKPgJ8h7XXAtDN1RxCPCnw&expires=1713359367&filename=output.xlsx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}{[map[type:0 userid:5bec87ff-4cfd-4af8-9846-0870ef14e1ca]] <nil> http://172.31.226.34:9696/cache/files/a2131f5d-ac98-4788-8f36-9e1958940cbc_9970/changes.zip/changes.zip?md5=bJyJGXYR58XmjJ9yN7rUAw&expires=1713359380&filename=changes.zip xlsx 0 map[changes:[map[created:2024-04-17 12:54:24 user:map[id:5bec87ff-4cfd-4af8-9846-0870ef14e1ca name:18927841103]]] serverVersion:7.1.1] a2131f5d-ac98-4788-8f36-9e1958940cbc 2 http://172.31.226.34:9696/cache/files/a2131f5d-ac98-4788-8f36-9e1958940cbc_9970/output.xlsx/output.xlsx?md5=P1fS9x-9ukSkFCqyuV8DlA&expires=1713359380&filename=output.xlsx  [5bec87ff-4cfd-4af8-9846-0870ef14e1ca]}
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:05:11 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:05:11 logger.go:22: req time：2024-05-05 21:05:11
+example 2024/05/05 21:05:11 logger.go:22: req url：/filetransfer/uploadfile?chunkNumber=1&chunkSize=1048576&currentChunkSize=159032&totalSize=159032&identifier=338f1f7137860d3bf6094941ac2a9ba2&filename=atl90.dll&relativePath=atl90.dll&totalChunks=1&filePath=%2F&isDir=0
+example 2024/05/05 21:05:11 logger.go:22: req method：GET
+example 2024/05/05 21:05:11 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:05:11 logger.go:22: response body in json：{"code":0,"success":true,"data":{"skipUpload":false},"message":"开始上传文件"}
+example 2024/05/05 21:05:11 logger.go:22: spend time：2 ms
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:05:11 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:05:11 logger.go:22: req time：2024-05-05 21:05:11
+example 2024/05/05 21:05:11 logger.go:22: req url：/filetransfer/uploadfile
+example 2024/05/05 21:05:11 logger.go:22: req method：POST
+example 2024/05/05 21:05:11 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:05:11 logger.go:22: response body in json：{"code":0,"success":true,"data":null,"message":"文件上传成功"}
+example 2024/05/05 21:05:11 logger.go:22: spend time：8 ms
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:05:11 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:05:11 logger.go:22: req time：2024-05-05 21:05:11
+example 2024/05/05 21:05:11 logger.go:22: req url：/file/getfilelist?fileType=0&filePath=%2F&currentPage=1&pageCount=50
+example 2024/05/05 21:05:11 logger.go:22: req method：GET
+example 2024/05/05 21:05:11 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:05:11 logger.go:22: response body in json：{"code":0,"success":true,"dataList":[{"userFileId":"07245436-4ebd-40cc-b4e1-69371f1ec6ff","fileId":"95c43903-45d9-4472-95d8-e595974c21c3","userId":"a25040e4-7466-4fd0-90d3-dd2134051c9f","filePath":"/","parentId":"e54fa63c-67a4-4a51-848a-afc7a206bec4","fileName":"atl90","extendName":"dll","fileType":0,"isDir":0,"fileSize":159032,"modifyTime":"2024-05-05 21:05:11","uploadTime":"2024-05-05 21:05:11","deleteBatchNum":""}],"total":1,"message":"文件列表"}
+example 2024/05/05 21:05:11 logger.go:22: spend time：1 ms
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:05:11 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:05:11 logger.go:22: req time：2024-05-05 21:05:11
+example 2024/05/05 21:05:11 logger.go:22: req url：/filetransfer/getstorage
+example 2024/05/05 21:05:11 logger.go:22: req method：GET
+example 2024/05/05 21:05:11 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:05:11 logger.go:22: response body in json：{"code":0,"success":true,"data":{"storageSize":159032,"totalStorageSize":10240000000},"message":"存储容量"}
+example 2024/05/05 21:05:11 logger.go:22: spend time：0 ms
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:05:11 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:05:11 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:05:11 logger.go:22: req time：2024-05-05 21:05:11
+example 2024/05/05 21:05:11 logger.go:22: req url：/filetransfer/getstorage
+example 2024/05/05 21:05:11 logger.go:22: req method：GET
+example 2024/05/05 21:05:11 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:05:11 logger.go:22: response body in json：{"code":0,"success":true,"data":{"storageSize":159032,"totalStorageSize":10240000000},"message":"存储容量"}
+example 2024/05/05 21:05:11 logger.go:22: spend time：0 ms
+example 2024/05/05 21:05:11 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:11:05 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:11:05 logger.go:22: req time：2024-05-05 21:11:05
+example 2024/05/05 21:11:05 logger.go:22: req url：/filetransfer/uploadfile?chunkNumber=1&chunkSize=1048576&currentChunkSize=254472&totalSize=254472&identifier=fdf773fcfed716a9e11d310ab14e0dc2&filename=cacert.pem&relativePath=cacert.pem&totalChunks=1&filePath=%2F&isDir=0
+example 2024/05/05 21:11:05 logger.go:22: req method：GET
+example 2024/05/05 21:11:05 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:11:05 logger.go:22: response body in json：{"code":0,"success":true,"data":{"skipUpload":false},"message":"开始上传文件"}
+example 2024/05/05 21:11:05 logger.go:22: spend time：0 ms
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:11:05 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:11:05 logger.go:22: req time：2024-05-05 21:11:05
+example 2024/05/05 21:11:05 logger.go:22: req url：/filetransfer/uploadfile
+example 2024/05/05 21:11:05 logger.go:22: req method：POST
+example 2024/05/05 21:11:05 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:11:05 logger.go:22: response body in json：{"code":0,"success":true,"data":null,"message":"文件上传成功"}
+example 2024/05/05 21:11:05 logger.go:22: spend time：8 ms
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:11:05 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:11:05 logger.go:22: req time：2024-05-05 21:11:05
+example 2024/05/05 21:11:05 logger.go:22: req url：/filetransfer/getstorage
+example 2024/05/05 21:11:05 logger.go:22: req method：GET
+example 2024/05/05 21:11:05 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:11:05 logger.go:22: response body in json：{"code":0,"success":true,"data":{"storageSize":413504,"totalStorageSize":10240000000},"message":"存储容量"}
+example 2024/05/05 21:11:05 logger.go:22: spend time：0 ms
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:11:05 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:11:05 logger.go:22: req time：2024-05-05 21:11:05
+example 2024/05/05 21:11:05 logger.go:22: req url：/file/getfilelist?fileType=0&filePath=%2F&currentPage=1&pageCount=50
+example 2024/05/05 21:11:05 logger.go:22: req method：GET
+example 2024/05/05 21:11:05 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:11:05 logger.go:22: response body in json：{"code":0,"success":true,"dataList":[{"userFileId":"07245436-4ebd-40cc-b4e1-69371f1ec6ff","fileId":"95c43903-45d9-4472-95d8-e595974c21c3","userId":"a25040e4-7466-4fd0-90d3-dd2134051c9f","filePath":"/","parentId":"e54fa63c-67a4-4a51-848a-afc7a206bec4","fileName":"atl90","extendName":"dll","fileType":0,"isDir":0,"fileSize":159032,"modifyTime":"2024-05-05 21:05:11","uploadTime":"2024-05-05 21:05:11","deleteBatchNum":""},{"userFileId":"684cc296-d57d-40ea-96e1-d076fcc83dd9","fileId":"0d8e805f-9339-475d-b458-2ec1dac8efcd","userId":"a25040e4-7466-4fd0-90d3-dd2134051c9f","filePath":"/","parentId":"e54fa63c-67a4-4a51-848a-afc7a206bec4","fileName":"cacert","extendName":"pem","fileType":0,"isDir":0,"fileSize":254472,"modifyTime":"2024-05-05 21:11:05","uploadTime":"2024-05-05 21:11:05","deleteBatchNum":""}],"total":2,"message":"文件列表"}
+example 2024/05/05 21:11:05 logger.go:22: spend time：0 ms
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================
+example 2024/05/05 21:11:05 logger.go:22: user_id：a25040e4-7466-4fd0-90d3-dd2134051c9f
+example 2024/05/05 21:11:05 logger.go:22: user_name： 18927841103
+example 2024/05/05 21:11:05 logger.go:22: req time：2024-05-05 21:11:05
+example 2024/05/05 21:11:05 logger.go:22: req url：/filetransfer/getstorage
+example 2024/05/05 21:11:05 logger.go:22: req method：GET
+example 2024/05/05 21:11:05 logger.go:22: ip：172.31.226.81
+example 2024/05/05 21:11:05 logger.go:22: response body in json：{"code":0,"success":true,"data":{"storageSize":413504,"totalStorageSize":10240000000},"message":"存储容量"}
+example 2024/05/05 21:11:05 logger.go:22: spend time：0 ms
+example 2024/05/05 21:11:05 logger.go:22: ========================== start ==========================

@@ -146,5 +146,4 @@ select * from temp;`).Find(&dirs)
 
 func TestBuildTree(t *testing.T) {
 	BuildFileTree()
-
 }

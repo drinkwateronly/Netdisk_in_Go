@@ -6,12 +6,12 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
 	docs "netdisk_in_go/docs"
+	"netdisk_in_go/handler"
+	"netdisk_in_go/handler/file_service"
+	"netdisk_in_go/handler/office_service"
+	"netdisk_in_go/handler/recovery_service"
+	"netdisk_in_go/handler/share_service"
 	"netdisk_in_go/middleware"
-	"netdisk_in_go/service"
-	"netdisk_in_go/service/file_service"
-	"netdisk_in_go/service/office_service"
-	"netdisk_in_go/service/recovery_service"
-	"netdisk_in_go/service/share_service"
 )
 
 func Router() *gin.Engine {
@@ -29,18 +29,18 @@ func Router() *gin.Engine {
 	})
 
 	// 通用
-	r.GET("/notice/list", service.NoticeList)
-	r.GET("/param/grouplist", service.GetCopyright)
+	r.GET("/notice/list", handler.NoticeList)
+	r.GET("/param/grouplist", handler.GetCopyright)
 
 	// 用户
 	userServiceGroup := r.Group("user")
-	userServiceGroup.POST("/register", service.UserRegister)
-	userServiceGroup.GET("/login", service.UserLogin)
-	userServiceGroup.GET("/checkuserlogininfo", service.CheckLogin)
+	userServiceGroup.POST("/register", handler.UserRegister)
+	userServiceGroup.GET("/login", handler.UserLogin)
+	userServiceGroup.GET("/checkuserlogininfo", handler.CheckLogin)
 
 	// 存储
 	fileTransferGroup := r.Group("filetransfer")
-	fileTransferGroup.Use(middleware.Authentication)
+	fileTransferGroup.Use(middleware.Authentication, middleware.NetdiskLogger)
 	fileTransferGroup.GET("/getstorage", file_service.GetUserStorage)
 	fileTransferGroup.GET("/uploadfile", file_service.FileUploadPrepare)
 	fileTransferGroup.POST("/uploadfile", file_service.FileUpload)
@@ -50,7 +50,7 @@ func Router() *gin.Engine {
 
 	// 文件夹操作
 	fileOpGroup := r.Group("file")
-	fileOpGroup.Use(middleware.Authentication)
+	fileOpGroup.Use(middleware.Authentication, middleware.NetdiskLogger)
 	fileOpGroup.GET("/getfilelist", file_service.GetUserFileList)         // 获取文件列表
 	fileOpGroup.POST("/createFold", file_service.CreateFolder)            // 文件夹创建
 	fileOpGroup.POST("/createFile", file_service.CreateFile)              // 文件创建
@@ -74,7 +74,7 @@ func Router() *gin.Engine {
 
 	// 回收站
 	recoveryGroup := r.Group("recoveryfile")
-	recoveryGroup.Use(middleware.Authentication)
+	recoveryGroup.Use(middleware.Authentication, middleware.NetdiskLogger)
 	recoveryGroup.GET("list", recovery_service.GetRecoveryFileList)             // 回收站文件列表
 	recoveryGroup.POST("/deleterecoveryfile", recovery_service.DelRecoveryFile) // 回收站文件删除
 	recoveryGroup.POST("/batchdelete", recovery_service.DelRecoveryInBatch)     // 回收站文件批量删除
@@ -82,13 +82,12 @@ func Router() *gin.Engine {
 
 	// 文件分享
 	shareGroup := r.Group("share")
-	shareGroup.Use(middleware.Authentication)
+	shareGroup.Use(middleware.Authentication, middleware.NetdiskLogger)
 	shareGroup.GET("/sharefileList", middleware.Authentication, share_service.GetShareFileList)
 	shareGroup.GET("/checkendtime", share_service.CheckShareEndTime)
 	shareGroup.GET("/sharetype", share_service.CheckShareType)
 	shareGroup.GET("/checkextractioncode", share_service.CheckShareExtractionCode)
 	shareGroup.GET("/shareList", share_service.GetMyShareList)
-
 	shareGroup.POST("/sharefile", middleware.Authentication, share_service.FilesShare)
 	shareGroup.POST("/savesharefile", middleware.Authentication, share_service.SaveShareFile)
 

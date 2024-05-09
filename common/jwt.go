@@ -18,9 +18,10 @@ type UserClaim struct {
 // GenerateCookie 根据UserClaim所需字段签发cookie
 func GenerateCookie(username, phone, userId string) (string, error) {
 	// 从yaml文件获取相关配置
-	issuer := sysconfig.Config.JWTConfig.Issuer
-	key := sysconfig.Config.JWTConfig.Key
-	cookieDuration := sysconfig.Config.JWTConfig.CookieDuration
+	jwtConfig := sysconfig.Config.NetDiskConfig.JWTConfig
+	issuer := jwtConfig.Issuer
+	key := jwtConfig.Key
+	cookieDuration := jwtConfig.CookieDuration
 	uc := UserClaim{
 		Username: username,
 		Phone:    phone,
@@ -44,9 +45,11 @@ func ParseCookie(token string) (*UserClaim, error) {
 	// 新建userClaim结构体
 	uc := new(UserClaim)
 	// jwt.ParseWithClaims 输入 需要解析的JWT字符串、一个实现了jwt.Claims接口的结构体、用于提供验证签名所需的密钥的回调函数
+	jwtConfig := sysconfig.Config.NetDiskConfig.JWTConfig
+
 	claims, err := jwt.ParseWithClaims(token, uc,
 		func(token *jwt.Token) (interface{}, error) {
-			return []byte(sysconfig.Config.JWTConfig.Key), nil
+			return []byte(jwtConfig.Key), nil
 		})
 	if err != nil {
 		return nil, err

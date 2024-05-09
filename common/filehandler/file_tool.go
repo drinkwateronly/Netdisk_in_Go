@@ -27,7 +27,7 @@ func IsChunkExist(filename string, currentChunkSize uint) bool {
 //		// 检查文件是否存在
 //		chunkFilePath := "./repository/chunk_file/" + chuckName + "-" + strconv.Itoa(i) + ".chunk"
 //		// 由于分片是小编号开始，所以一旦某个分片不存在，其后续编号的分片也不会存在，删除所有分片即完成
-//		if IsFileExist(chunkFilePath) {
+//		if IsChunkExist(chunkFilePath) {
 //			return
 //		}
 //		os.Remove(chunkFilePath)
